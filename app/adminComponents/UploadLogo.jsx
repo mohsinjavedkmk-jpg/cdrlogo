@@ -1,44 +1,35 @@
-
-  "use client";
+"use client";
 
 import { useState, useRef } from "react";
-import { Upload, Plus, X, Globe, Search } from "lucide-react";
+import { Upload, Plus, X, Globe, BarChart2, RefreshCw } from "lucide-react";
 
 const COLORS_INIT = ["#3B82F6", "#1E3A5F", "#FBFAFC"];
-const FILE_ACCEPT = ".ai,.cdr,.svg,.png,.zip,image/svg+xml,image/png,application/zip,application/x-zip-compressed";
+
 const CATEGORIES = [
-  "All",
-  "Technology",
-  "Social Media",
-  "Sports",
-  "Automotive",
-  "Food & Beverage",
-  "Fashion",
-  "Finance",
-  "Entertainment",
-  "Gaming",
-  "Airline",
-  "E-commerce"
+  "Technology", "Social Media", "Sports", "Automotive",
+  "Food & Beverage", "Fashion", "Finance", "Entertainment",
+  "Gaming", "Airline", "E-commerce",
 ];
-function filePreviewUrl(file) {
-  if (file.type.startsWith("image/")) return URL.createObjectURL(file);
-  return null;
+
+function toSlug(str) {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
-function FileIcon({ ext }) {
-  const colors = { zip: "#f59e0b", ai: "#ff9a00", cdr: "#00b140", svg: "#3b82f6", png: "#a855f7" };
-  const c = colors[ext] || "#64748b";
+function FileIcon() {
+  const c = "#f59e0b";
   return (
     <div style={{
       width: 36, height: 36, borderRadius: 8,
       background: c + "22", border: `1px solid ${c}44`,
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: 10, fontWeight: 800, color: c,
-      fontFamily: "'DM Sans', sans-serif",
-      flexShrink: 0,
-    }}>
-      {ext.toUpperCase()}
-    </div>
+      fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
+    }}>ZIP</div>
   );
 }
 
@@ -52,131 +43,110 @@ export default function UploadLogo({ dark }) {
   const [tags, setTags] = useState(["Brands", "Technology", "AI"]);
   const [tagInput, setTagInput] = useState("");
   const [publishStatus, setPublishStatus] = useState("Draft");
+  const [slugEdited, setSlugEdited] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
 
+  // Download counter — single value or unlimited
+  const [dlCount, setDlCount] = useState(0);
+  const [dlUnlimited, setDlUnlimited] = useState(false);
+
   const [form, setForm] = useState({
-    logoName: "", brand: "", website: "",
+    logoName: "", slug: "", brand: "", website: "",
     category: "", industry: "", country: "",
     license: "", description: "", history: "",
     metaTitle: "", metaDescription: "", altText: "",
-    focusKeywords: "", canonicalUrl: "", relatedLogos: "",
+    focusKeywords: "",
   });
 
-  const bg = dark ? "#0f1117" : "#f8fafc";
-  const card = dark ? "#131720" : "#ffffff";
-  const border = dark ? "#1e2535" : "#e2e8f0";
-  const text = dark ? "#e2e8f0" : "#1e293b";
-  const muted = dark ? "#64748b" : "#94a3b8";
-  const inputBg = dark ? "#0d1117" : "#f8fafc";
-  const inputBorder = dark ? "#1e2535" : "#e2e8f0";
-  const labelColor = dark ? "#94a3b8" : "#475569";
-  const green = "#22c55e";
+  // ── theme tokens ─────────────────────────────────────────────────
+  const bg       = dark ? "#0f1117" : "#f8fafc";
+  const card     = dark ? "#131720" : "#ffffff";
+  const border   = dark ? "#1e2535" : "#e2e8f0";
+  const text     = dark ? "#e2e8f0" : "#1e293b";
+  const muted    = dark ? "#64748b" : "#94a3b8";
+  const inputBg  = dark ? "#0d1117" : "#f8fafc";
+  const inputBdr = dark ? "#1e2535" : "#e2e8f0";
+  const labelClr = dark ? "#94a3b8" : "#475569";
+  const green    = "#22c55e";
   const greenDim = dark ? "rgba(34,197,94,0.12)" : "rgba(22,163,74,0.08)";
 
   const inputStyle = {
     width: "100%", padding: "9px 12px",
-    background: inputBg, border: `1px solid ${inputBorder}`,
+    background: inputBg, border: `1px solid ${inputBdr}`,
     borderRadius: 8, color: text, fontSize: 13,
     fontFamily: "'DM Sans', sans-serif",
     outline: "none", boxSizing: "border-box",
     transition: "border-color 0.15s",
   };
-
   const labelStyle = {
     display: "block", fontSize: 12, fontWeight: 600,
-    color: labelColor, marginBottom: 5,
-    fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.3px"
+    color: labelClr, marginBottom: 5,
+    fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.3px",
   };
-
   const rowStyle = { display: "flex", gap: 14, flexWrap: "wrap" };
   const colStyle = { flex: 1, minWidth: 200 };
 
-  // ✅ ZIP ONLY FILE HANDLING
+  // ── field helpers ─────────────────────────────────────────────────
+  const setField = (key) => (e) => {
+    const val = e.target.value;
+    setForm(prev => {
+      const next = { ...prev, [key]: val };
+      if (key === "logoName" && !slugEdited) next.slug = toSlug(val);
+      return next;
+    });
+  };
+
+  const handleSlugChange = (e) => {
+    setSlugEdited(true);
+    setForm(prev => ({ ...prev, slug: toSlug(e.target.value) }));
+  };
+
+  const regenerateSlug = () => {
+    setSlugEdited(false);
+    setForm(prev => ({ ...prev, slug: toSlug(prev.logoName) }));
+  };
+
+  // ── file handling ─────────────────────────────────────────────────
   const addFiles = (fileList) => {
     const valid = [];
-
-    Array.from(fileList).forEach((f) => {
+    let rejected = false;
+    Array.from(fileList).forEach(f => {
       const isZip =
         f.type === "application/zip" ||
         f.type === "application/x-zip-compressed" ||
         f.name.toLowerCase().endsWith(".zip");
-
-      if (!isZip) {
-        setSubmitResult({ ok: false, message: "Only ZIP files are allowed." });
-        return;
-      }
-
-      valid.push({
-        file: f,
-        id: Math.random().toString(36).slice(2),
-        preview: null,
-        ext: "zip",
-      });
+      if (!isZip) { rejected = true; return; }
+      valid.push({ file: f, id: Math.random().toString(36).slice(2) });
     });
-
-    if (valid.length > 0) {
-      setFiles(prev => [...prev, ...valid]);
-      setSubmitResult(null);
-    }
+    if (rejected) setSubmitResult({ ok: false, message: "Only ZIP files are accepted." });
+    else setSubmitResult(null);
+    if (valid.length) setFiles(prev => [...prev, ...valid]);
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    addFiles(e.dataTransfer.files);
-  };
+  const handleDrop = (e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); };
+  const handleBrowse = (e) => { addFiles(e.target.files); e.target.value = ""; };
+  const removeFile = (id) => setFiles(prev => prev.filter(x => x.id !== id));
 
-  const handleBrowse = (e) => {
-    addFiles(e.target.files);
-    e.target.value = "";
-  };
-
-  const removeFile = (id) => {
-    setFiles(prev => prev.filter(x => x.id !== id));
-  };
-
+  // ── tags / colors ─────────────────────────────────────────────────
   const addTag = (e) => {
     if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
       e.preventDefault();
-      if (!tags.includes(tagInput.trim())) setTags(prev => [...prev, tagInput.trim()]);
+      if (!tags.includes(tagInput.trim())) setTags(p => [...p, tagInput.trim()]);
       setTagInput("");
     }
   };
+  const removeTag = (t) => setTags(p => p.filter(x => x !== t));
+  const removeColor = (c) => setColors(p => p.filter(x => x !== c));
+  const addColor = () => { if (!colors.includes(newColor)) setColors(p => [...p, newColor]); };
 
-  const removeTag = (t) => setTags(prev => prev.filter(x => x !== t));
-
-  const removeColor = (c) => setColors(prev => prev.filter(x => x !== c));
-  const addColor = () => { if (!colors.includes(newColor)) setColors(prev => [...prev, newColor]); };
-
-  const setField = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
-
-  // ✅ SUBMIT FIX
+  // ── submit ────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (
-      !form.logoName.trim() ||
-      !form.category ||
-      !form.description.trim() ||
-      files.length === 0
-    ) {
-      setSubmitResult({
-        ok: false,
-        message: "All required fields + ZIP file are required.",
-      });
-      return;
-    }
-
-    const invalidFile = files.find(({ file }) =>
-      !file.name.toLowerCase().endsWith(".zip")
-    );
-
-    if (invalidFile) {
-      setSubmitResult({
-        ok: false,
-        message: "Only ZIP files are allowed.",
-      });
-      return;
-    }
+    if (!form.logoName.trim())    return setSubmitResult({ ok: false, message: "Logo Name is required." });
+    if (!form.slug.trim())        return setSubmitResult({ ok: false, message: "Slug is required." });
+    if (!form.category)           return setSubmitResult({ ok: false, message: "Category is required." });
+    if (!form.description.trim()) return setSubmitResult({ ok: false, message: "Description is required." });
+    if (files.length === 0)       return setSubmitResult({ ok: false, message: "Please upload at least one ZIP file." });
 
     setSubmitting(true);
     setSubmitResult(null);
@@ -184,57 +154,94 @@ export default function UploadLogo({ dark }) {
     try {
       const fd = new FormData();
 
+      // ── ZIP files (field name "files" matches backend getAll("files")) ──
       files.forEach(({ file }) => fd.append("files", file));
-      Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-      fd.append("tags", JSON.stringify(tags));
-      fd.append("brandColors", JSON.stringify(colors));
-      fd.append("publishStatus", publishStatus);
 
-    //   const res = await fetch("/api/logos/upload", {
-    //     method: "POST",
-    //     body: fd,
-    //   });
+      // ── Core identity ──
+      fd.append("logoName",        form.logoName.trim());
+      fd.append("slug",            form.slug.trim());
 
-    //   const data = await res.json();
+      // ── Classification ──
+      fd.append("brand",           form.brand);
+      fd.append("website",         form.website);
+      fd.append("category",        form.category);
+      fd.append("industry",        form.industry);
+      fd.append("country",         form.country);
+      fd.append("license",         form.license);
 
-    //   if (res.ok) {
-    //     setSubmitResult({
-    //       ok: true,
-    //       message: data.message || "Logo uploaded successfully!",
-    //     });
+      // ── Content ──
+      fd.append("description",     form.description);
+      fd.append("history",         form.history);
 
-    //     setForm({
-    //       logoName: "", brand: "", website: "",
-    //       category: "", industry: "", country: "",
-    //       license: "", description: "", history: "",
-    //       metaTitle: "", metaDescription: "", altText: "",
-    //       focusKeywords: "", canonicalUrl: "", relatedLogos: "",
-    //     });
+      // ── Taxonomy (JSON arrays) ──
+      fd.append("tags",            JSON.stringify(tags));
+      fd.append("brandColors",     JSON.stringify(colors));
 
-    //     setFiles([]);
-    //     setTags(["Brands", "Technology", "AI"]);
-    //     setColors(COLORS_INIT);
-    //     setPublishStatus("Draft");
+      // ── SEO ──
+      fd.append("metaTitle",       form.metaTitle);
+      fd.append("metaDescription", form.metaDescription);
+      fd.append("altText",         form.altText);
+      fd.append("focusKeywords",   form.focusKeywords);
 
-    //   } else {
-    //     setSubmitResult({
-    //       ok: false,
-    //       message: data.error || "Upload failed",
-    //     });
-    //   }
+      // ── Publishing ──
+      fd.append("publishStatus",   publishStatus);
 
+      // ── Download counter — "unlimited" or numeric string ──
+      fd.append("downloadCount",   dlUnlimited ? "unlimited" : String(dlCount));
+
+      // ── POST to correct API route ──
+      const res  = await fetch("/api/logo/upload/single", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (res.ok) {
+        setSubmitResult({ ok: true, message: data.message || "Logo uploaded successfully!" });
+        // Reset form
+        setForm({
+          logoName: "", slug: "", brand: "", website: "",
+          category: "", industry: "", country: "",
+          license: "", description: "", history: "",
+          metaTitle: "", metaDescription: "", altText: "",
+          focusKeywords: "",
+        });
+        setFiles([]);
+        setTags(["Brands", "Technology", "AI"]);
+        setColors(COLORS_INIT);
+        setPublishStatus("Draft");
+        setSlugEdited(false);
+        setDlCount(0);
+        setDlUnlimited(false);
+      } else {
+        setSubmitResult({ ok: false, message: data.error || "Upload failed." });
+      }
     } catch (err) {
-      setSubmitResult({
-        ok: false,
-        message: "Network error: " + err.message,
-      });
+      setSubmitResult({ ok: false, message: "Network error: " + err.message });
     } finally {
       setSubmitting(false);
     }
   };
 
+  // ── toggle ────────────────────────────────────────────────────────
+  const Toggle = ({ on, toggle, label }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div onClick={toggle} style={{
+        width: 36, height: 20, borderRadius: 99,
+        background: on ? green : (dark ? "#1e2535" : "#cbd5e1"),
+        cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0,
+      }}>
+        <div style={{
+          position: "absolute", top: 2, left: on ? 18 : 2,
+          width: 16, height: 16, borderRadius: "50%",
+          background: "#fff", transition: "left 0.2s",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+        }} />
+      </div>
+      {label && <span style={{ fontSize: 12, color: on ? green : muted, fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}>{label}</span>}
+    </div>
+  );
+
   return (
     <div style={{ background: bg, minHeight: "100vh", padding: "28px 24px", fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: text, letterSpacing: "-0.5px" }}>Upload Logo</h1>
         <p style={{ margin: "4px 0 0", fontSize: 13, color: muted }}>Add a new logo with metadata, SEO settings and publish controls.</p>
@@ -252,8 +259,7 @@ export default function UploadLogo({ dark }) {
             borderRadius: 12,
             padding: files.length > 0 ? "18px 20px" : "36px 20px",
             display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
-            background: dragging ? greenDim : card,
-            transition: "all 0.2s",
+            background: dragging ? greenDim : card, transition: "all 0.2s",
           }}
         >
           {files.length === 0 ? (
@@ -261,22 +267,19 @@ export default function UploadLogo({ dark }) {
               <div style={{ width: 48, height: 48, borderRadius: 12, background: greenDim, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
                 <Upload size={22} color={green} />
               </div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: text }}>Drag & drop logo files here</p>
-              <p style={{ margin: 0, fontSize: 12, color: muted }}>Supports AI, CDR, SVG, PNG, ZIP (Max 50MB each)</p>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: text }}>Drag & drop ZIP file here</p>
+              <p style={{ margin: 0, fontSize: 12, color: muted }}>Only ZIP files accepted (Max 50MB each)</p>
             </>
           ) : (
             <div style={{ width: "100%", display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {files.map(({ id, file, preview, ext }) => (
+              {files.map(({ id, file }) => (
                 <div key={id} style={{
                   display: "flex", alignItems: "center", gap: 8,
                   background: dark ? "#0d1117" : "#f1f5f9",
-                  border: `1px solid ${border}`,
-                  borderRadius: 10, padding: "8px 10px",
-                  flex: "1 1 180px", maxWidth: 240,
+                  border: `1px solid ${border}`, borderRadius: 10,
+                  padding: "8px 10px", flex: "1 1 180px", maxWidth: 260,
                 }}>
-                  {preview
-                    ? <img src={preview} alt={file.name} style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
-                    : <FileIcon ext={ext} />}
+                  <FileIcon />
                   <div style={{ flex: 1, overflow: "hidden" }}>
                     <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</p>
                     <p style={{ margin: "2px 0 0", fontSize: 11, color: muted }}>{(file.size / 1024).toFixed(0)} KB</p>
@@ -288,12 +291,11 @@ export default function UploadLogo({ dark }) {
               ))}
             </div>
           )}
-
-          <input ref={fileInputRef} type="file" multiple accept={FILE_ACCEPT} style={{ display: "none" }} onChange={handleBrowse} />
+          <input ref={fileInputRef} type="file" multiple accept=".zip,application/zip,application/x-zip-compressed" style={{ display: "none" }} onChange={handleBrowse} />
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{ marginTop: files.length > 0 ? 4 : 8, padding: "8px 18px", background: "transparent", border: `1px solid ${border}`, borderRadius: 8, color: text, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
-            {files.length > 0 ? "+ Add More Files" : "Browse Files"}
+            {files.length > 0 ? "+ Add More ZIP Files" : "Browse Files"}
           </button>
         </div>
 
@@ -301,55 +303,66 @@ export default function UploadLogo({ dark }) {
         <div style={{ background: card, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
           <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: text }}>Basic Information</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
             <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Logo Name <span style={{ color: green }}>*</span></label>
-                <input style={inputStyle} placeholder="e.g. TechNova" value={form.logoName} onChange={setField("logoName")} />
+                <input style={inputStyle} placeholder="e.g. Nike" value={form.logoName} onChange={setField("logoName")} />
               </div>
+              <div style={colStyle}>
+                <label style={labelStyle}>
+                  Slug
+                  <span style={{ marginLeft: 6, fontSize: 11, color: muted, fontWeight: 400 }}>auto-generated</span>
+                </label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: muted, pointerEvents: "none", userSelect: "none" }}>/</span>
+                  <input style={{ ...inputStyle, paddingLeft: 20, paddingRight: 36 }} placeholder="nike" value={form.slug} onChange={handleSlugChange} />
+                  <button onClick={regenerateSlug} title="Re-generate from Logo Name" style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: slugEdited ? green : muted, padding: 0, display: "flex" }}>
+                    <RefreshCw size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Brand / Company</label>
                 <input style={inputStyle} placeholder="Company name" value={form.brand} onChange={setField("brand")} />
               </div>
-            </div>
-            <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Website</label>
                 <input style={inputStyle} placeholder="https://..." value={form.website} onChange={setField("website")} />
               </div>
+            </div>
+
+            <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Category <span style={{ color: green }}>*</span></label>
-                <select
-  style={{ ...inputStyle, appearance: "none" }}
-  value={form.category}
-  onChange={setField("category")}
->
-  <option value="">Select category</option>
-
-  {CATEGORIES.map((cat) => (
-    <option key={cat} value={cat}>
-      {cat}
-    </option>
-  ))}
-</select>
+                <select style={{ ...inputStyle, appearance: "none" }} value={form.category} onChange={setField("category")}>
+                  <option value="">Select category</option>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
               </div>
-            </div>
-            <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Industry</label>
                 <input style={inputStyle} placeholder="e.g. Software, Banking" value={form.industry} onChange={setField("industry")} />
               </div>
+            </div>
+
+            <div style={rowStyle}>
               <div style={colStyle}>
                 <label style={labelStyle}>Country</label>
                 <input style={inputStyle} placeholder="e.g. United States" value={form.country} onChange={setField("country")} />
               </div>
+              <div style={{ ...colStyle, maxWidth: "50%" }}>
+                <label style={labelStyle}>License</label>
+                <select style={{ ...inputStyle, appearance: "none" }} value={form.license} onChange={setField("license")}>
+                  <option value="">Select license</option>
+                  <option>Free for personal use</option><option>For Commerical use</option><option>Open Source</option>
+                </select>
+              </div>
             </div>
-            <div style={{ maxWidth: "50%" }}>
-              <label style={labelStyle}>License</label>
-              <select style={{ ...inputStyle, appearance: "none" }} value={form.license} onChange={setField("license")}>
-                <option value="">Select license</option>
-                <option>Free</option><option>CC BY</option><option>Commercial</option>
-              </select>
-            </div>
+
             <div>
               <label style={labelStyle}>Description <span style={{ color: green }}>*</span></label>
               <textarea style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} placeholder="Detailed description of the logo and brand..." value={form.description} onChange={setField("description")} />
@@ -358,6 +371,60 @@ export default function UploadLogo({ dark }) {
               <label style={labelStyle}>Logo History / About</label>
               <textarea style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} placeholder="Write detailed history about this logo and brand evolution..." value={form.history} onChange={setField("history")} />
             </div>
+          </div>
+        </div>
+
+        {/* ── Download Counter ── */}
+        <div style={{ background: card, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <BarChart2 size={16} color={green} />
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: text }}>Download Counter</h3>
+          </div>
+          <p style={{ margin: "0 0 16px", fontSize: 12, color: muted }}>
+            Set the visible download count shown on the logo page.
+          </p>
+
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
+            {/* Count input */}
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <label style={labelStyle}>Download Count</label>
+              <input
+                type="number"
+                min={0}
+                value={dlUnlimited ? "" : dlCount}
+                placeholder={dlUnlimited ? "Unlimited" : "0"}
+                disabled={dlUnlimited}
+                onChange={e => setDlCount(Math.max(0, Number(e.target.value)))}
+                style={{
+                  ...inputStyle,
+                  background: dlUnlimited ? (dark ? "#0a0d12" : "#e8ecf0") : inputBg,
+                  color: dlUnlimited ? muted : text,
+                  cursor: dlUnlimited ? "not-allowed" : "text",
+                  MozAppearance: "textfield",
+                }}
+              />
+            </div>
+
+            {/* Unlimited toggle */}
+            <div style={{ paddingBottom: 10 }}>
+              <Toggle
+                on={dlUnlimited}
+                toggle={() => setDlUnlimited(p => !p)}
+                label="Unlimited"
+              />
+            </div>
+          </div>
+
+          {/* Preview pill */}
+          <div style={{
+            marginTop: 14, display: "inline-flex", alignItems: "center", gap: 6,
+            background: greenDim, border: `1px solid ${green}33`,
+            borderRadius: 99, padding: "5px 14px",
+          }}>
+            <BarChart2 size={12} color={green} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: green, fontFamily: "'DM Sans', sans-serif" }}>
+              {dlUnlimited ? "Unlimited" : dlCount.toLocaleString()} downloads
+            </span>
           </div>
         </div>
 
@@ -395,16 +462,6 @@ export default function UploadLogo({ dark }) {
           </div>
         </div>
 
-        {/* ── Related Logos ── */}
-        {/* <div style={{ background: card, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
-          <h3 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: text }}>Related Logos (Internal Linking)</h3>
-          <p style={{ margin: "0 0 10px", fontSize: 12, color: muted }}>Link related logos for better SEO internal linking</p>
-          <div style={{ position: "relative" }}>
-            <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: muted }} />
-            <input style={{ ...inputStyle, paddingLeft: 32 }} placeholder="Search and link related logos..." value={form.relatedLogos} onChange={setField("relatedLogos")} />
-          </div>
-        </div> */}
-
         {/* ── SEO Settings ── */}
         <div style={{ background: card, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -441,7 +498,7 @@ export default function UploadLogo({ dark }) {
               <p style={{ margin: "2px 0 0", fontSize: 12, color: muted }}>Set as draft to review before publishing</p>
             </div>
             <select value={publishStatus} onChange={e => setPublishStatus(e.target.value)} style={{ ...inputStyle, width: "auto", minWidth: 120 }}>
-              <option>Draft</option><option>Published</option><option>Scheduled</option>
+              <option>Draft</option><option>Published</option>
             </select>
           </div>
         </div>
@@ -459,7 +516,7 @@ export default function UploadLogo({ dark }) {
           </div>
         )}
 
-        {/* ── Submit button ── */}
+        {/* ── Submit ── */}
         <div>
           <button
             onClick={handleSubmit}
@@ -490,7 +547,11 @@ export default function UploadLogo({ dark }) {
         </div>
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+      `}</style>
     </div>
   );
 }

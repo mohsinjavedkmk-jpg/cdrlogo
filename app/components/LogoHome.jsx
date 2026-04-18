@@ -1,70 +1,36 @@
+
+
+
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-const ALPHABET = ["All","A","B","C","D","E","F","G","H","I","J","K","L","M",
-                  "N","O","P","Q","R","S","T","U","V","W","X","Y","Z","0-9"];
+const ALPHABET = ["All", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+  "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0-9"];
 
-const CATEGORIES = ["All","Technology","Social Media","Sports","Automotive",
-                    "Food & Beverage","Fashion","Finance","Entertainment",
-                    "Gaming","Airline","E-commerce"];
+const CATEGORIES = ["All", "Technology", "Social Media", "Sports", "Automotive",
+  "Food & Beverage", "Fashion", "Finance", "Entertainment",
+  "Gaming", "Airline", "E-commerce"];
 
 const SORT_OPTIONS = [
-  { key: "newest",  label: "Newest",  icon: "🕐" },
+  { key: "newest", label: "Newest", icon: "🕐" },
   { key: "popular", label: "Popular", icon: "🔥" },
-  { key: "az",      label: "A–Z",     icon: "↕" },
-];
-
-const ALL_LOGOS = [
-  { id:1,  name:"Apple",       category:"Technology",    downloads:84200, trending:true,  colors:["#1d1d1f","#ffffff","#a3a3a3"], formats:["AI","SVG","PNG"],     imageUrl:"https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg" },
-  { id:2,  name:"Google",      category:"Technology",    downloads:72100, trending:true,  colors:["#4285f4","#34a853","#fbbc05","#ea4335"], formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" },
-  { id:3,  name:"Nike",        category:"Sports",        downloads:61000, trending:false, colors:["#000000","#ffffff"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg" },
-  { id:4,  name:"Meta",        category:"Social Media",  downloads:55300, trending:true,  colors:["#0866ff","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg" },
-  { id:5,  name:"Tesla",       category:"Automotive",    downloads:48900, trending:false, colors:["#cc0000","#ffffff"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/b/bd/Tesla_Motors.svg" },
-  { id:6,  name:"McDonald's",  category:"Food & Beverage",downloads:43100,trending:false, colors:["#FFC72C","#DA291C"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/3/36/McDonald%27s_Golden_Arches.svg" },
-  { id:7,  name:"Adidas",      category:"Sports",        downloads:39800, trending:false, colors:["#000000","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg" },
-  { id:8,  name:"Amazon",      category:"E-commerce",    downloads:38500, trending:false, colors:["#FF9900","#232F3E"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg" },
-  { id:9,  name:"Netflix",     category:"Entertainment", downloads:36200, trending:true,  colors:["#e50914","#141414"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" },
-  { id:10, name:"Spotify",     category:"Entertainment", downloads:33700, trending:false, colors:["#1DB954","#191414"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/2/26/Spotify_logo_with_text.svg" },
-  { id:11, name:"BMW",         category:"Automotive",    downloads:30100, trending:false, colors:["#0066B1","#ffffff","#000000"], formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/4/44/BMW.svg" },
-  { id:12, name:"Samsung",     category:"Technology",    downloads:29400, trending:false, colors:["#1428A0","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg" },
-  { id:13, name:"Coca-Cola",   category:"Food & Beverage",downloads:27800,trending:false, colors:["#F40009","#ffffff"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/c/ce/Coca-Cola_logo.svg" },
-  { id:14, name:"Visa",        category:"Finance",       downloads:26300, trending:false, colors:["#1A1F71","#F7A600"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" },
-  { id:15, name:"PlayStation", category:"Gaming",        downloads:25600, trending:true,  colors:["#003087","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/4/4e/Playstation_logo_colour.svg" },
-  { id:16, name:"Twitter/X",   category:"Social Media",  downloads:24100, trending:false, colors:["#000000","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/5/5a/X_icon_2.svg" },
-  { id:17, name:"Emirates",    category:"Airline",       downloads:22700, trending:false, colors:["#D4153C","#ffffff","#C8A84B"], formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/d/d0/Emirates_logo.svg" },
-  { id:18, name:"Gucci",       category:"Fashion",       downloads:21500, trending:true,  colors:["#1e1e1e","#B69A54"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/5/55/Gucci_logo.svg" },
-  { id:19, name:"Xbox",        category:"Gaming",        downloads:20300, trending:false, colors:["#107C10","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/f/f9/Xbox_one_logo.svg" },
-  { id:20, name:"Mastercard",  category:"Finance",       downloads:19800, trending:false, colors:["#EB001B","#F79E1B"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" },
-  { id:21, name:"Airbnb",      category:"E-commerce",    downloads:18600, trending:false, colors:["#FF5A5F","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_Bélo.svg" },
-  { id:22, name:"Snapchat",    category:"Social Media",  downloads:17400, trending:false, colors:["#FFFC00","#000000"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/en/a/ad/Snapchat_logo.svg" },
-  { id:23, name:"Ferrari",     category:"Automotive",    downloads:16200, trending:false, colors:["#CC0000","#FFD700"],           formats:["AI","SVG","PNG"], imageUrl:"https://upload.wikimedia.org/wikipedia/en/d/d1/Ferrari-Logo.svg" },
-  { id:24, name:"Puma",        category:"Sports",        downloads:15300, trending:false, colors:["#000000","#ffffff"],           formats:["AI","SVG","PNG"],       imageUrl:"https://upload.wikimedia.org/wikipedia/commons/4/4c/Puma_Logo.svg" },
+  { key: "az", label: "A–Z", icon: "↕" },
 ];
 
 const PAGE_SIZE = 12;
 
-function mockFetch({ page, sort, letter, category }) {
-  return new Promise(resolve => {
-    setTimeout(() => {
-      let results = [...ALL_LOGOS];
-      if (letter && letter !== "All") {
-        const isNumeric = letter === "0-9";
-        results = results.filter(l =>
-          isNumeric ? /^[0-9]/.test(l.name) : l.name.toUpperCase().startsWith(letter)
-        );
-      }
-      if (category && category !== "All") {
-        results = results.filter(l => l.category === category);
-      }
-      if (sort === "popular") results.sort((a, b) => b.downloads - a.downloads);
-      else if (sort === "az")  results.sort((a, b) => a.name.localeCompare(b.name));
-      else                     results.sort((a, b) => b.id - a.id);
-      const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
-      const logos = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-      resolve({ logos, totalPages });
-    }, 420);
-  });
+// ─── helper: sort + paginate entirely in JS ───────────────────────────────────
+function applyFrontend(allLogos, sort, page) {
+  const sorted = [...allLogos];
+  if (sort === "popular") sorted.sort((a, b) => (b.downloads ?? 0) - (a.downloads ?? 0));
+  else if (sort === "az") sorted.sort((a, b) => a.logoName.localeCompare(b.logoName));
+  else sorted.sort((a, b) => (b.id > a.id ? 1 : -1)); // newest = by id desc
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const logos = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  return { logos, totalPages };
 }
 
 function SkeletonCard() {
@@ -74,8 +40,9 @@ function SkeletonCard() {
       <div className="card-body">
         <div className="skeleton-line w60" />
         <div className="skeleton-line w40 mt4" />
-        <div className="card-formats" style={{marginTop:8}}>
-          {[1,2,3].map(i => <div key={i} className="skeleton-badge" />)}
+
+        <div className="card-formats" style={{ marginTop: 8 }}>
+          {[1, 2, 3].map(i => <div key={i} className="skeleton-badge" />)}
         </div>
       </div>
     </div>
@@ -84,42 +51,52 @@ function SkeletonCard() {
 
 function LogoCard({ logo }) {
   const [imgErr, setImgErr] = useState(false);
-  const fmts = (logo.formats || ["AI","SVG","PNG"]).slice(0, 3);
+  const router = useRouter();
+  // backend returns brandColors (array) and webpUrl
+  const colors = Array.isArray(logo.brandColors) ? logo.brandColors : [];
+  const formats = ["SVG", "PNG", "AI", "CDR"]; // static — backend doesn't return formats
 
   return (
-    <div className="logo-card">
+    <div className="logo-card" onClick={(e)=>{
+      e.preventDefault();
+      router.push(`/logo/${logo.slug}`);
+    }}>
       {logo.trending && (
         <div className="trending-badge">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-            <polyline points="17 6 23 6 23 12"/>
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+            <polyline points="17 6 23 6 23 12" />
           </svg>
           TRENDING
         </div>
       )}
 
       <div className="card-image">
-        {!imgErr && logo.imageUrl ? (
-          <img src={logo.imageUrl} alt={logo.name}
-            onError={() => setImgErr(true)} className="card-img" />
+        {!imgErr && logo.webpUrl ? (
+          <img src={logo.webpUrl} alt={logo.logoName}
+            onError={() => setImgErr(true)} className="card-img"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+
+          />
         ) : (
-          <span className="card-initials">{logo.name?.slice(0,2).toUpperCase()}</span>
+          <span className="card-initials">{logo.logoName?.slice(0, 2).toUpperCase()}</span>
         )}
       </div>
 
       <div className="card-body">
-        <div className="card-name">{logo.name}</div>
+        <div className="card-name">{logo.logoName}</div>
         <span className="card-category">{logo.category}</span>
 
         <div className="card-colors">
-          {(logo.colors || []).slice(0, 3).map((c, i) => (
+          {colors.slice(0, 3).map((c, i) => (
             <span key={i} className="color-dot" style={{ background: c }} />
           ))}
         </div>
 
         <div className="card-formats">
-          {fmts.map(f => (
+          {formats.map(f => (
             <span key={f} className={`fmt-tag fmt-${f.toLowerCase()}`}>{f}</span>
           ))}
         </div>
@@ -129,39 +106,62 @@ function LogoCard({ logo }) {
 }
 
 export default function LogosPage() {
-  const [logos,          setLogos]       = useState([]);
-  const [loading,        setLoading]     = useState(true);
-  const [error,          setError]       = useState(null);
-  const [page,           setPage]        = useState(1);
-  const [totalPages,     setTotalPages]  = useState(1);
-  const [activeLetter,   setActiveLetter]= useState("All");
-  const [activeCategory, setActiveCat]  = useState("All");
-  const [sort,           setSort]        = useState("newest");
+  // allLogos = full unfiltered data from API (filtered only by letter+category)
+  const [allLogos, setAllLogos] = useState([]);
+  const [logos, setLogos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [activeLetter, setActiveLetter] = useState("All");
+  const [activeCategory, setActiveCat] = useState("All");
+  const [sort, setSort] = useState("newest");
 
-  const fetchLogos = useCallback(async () => {
-    setLoading(true); setError(null);
+
+  // ── Fetch from real API when letter or category changes ──────────────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      const params = {
-        page, sort,
-        ...(activeLetter   !== "All" && { letter: activeLetter }),
-        ...(activeCategory !== "All" && { category: activeCategory }),
-      };
-      const data = await mockFetch(params);
-      setLogos(data.logos ?? []);
-      setTotalPages(data.totalPages ?? 1);
+      const res = await fetch("/api/logo/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          letter: activeLetter,
+          category: activeCategory,
+        }),
+      });
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const data = await res.json();
+      setAllLogos(data.logos ?? []);
     } catch (err) {
-      setError(err.message); setLogos([]);
+      setError(err.message);
+      setAllLogos([]);
     } finally {
       setLoading(false);
     }
-  }, [page, sort, activeLetter, activeCategory]);
+  }, [activeLetter, activeCategory]);
 
-  useEffect(() => { fetchLogos(); }, [fetchLogos]);
-  useEffect(() => { setPage(1); }, [activeLetter, activeCategory, sort]);
+  // Re-fetch when filters change; reset page too
+  useEffect(() => {
+    setPage(1);
+    fetchAll();
+  }, [fetchAll]);
 
-  return (
-    <>
-      <style>{`
+  // ── Sort + paginate in JS whenever allLogos / sort / page changes ────────────
+  useEffect(() => {
+    const { logos: sliced, totalPages: tp } = applyFrontend(allLogos, sort, page);
+    setLogos(sliced);
+    setTotalPages(tp);
+  }, [allLogos, sort, page]);
+
+  // Reset to page 1 when sort changes (don't refetch — data already in memory)
+  useEffect(() => { setPage(1); }, [sort]);
+
+
+
+  return (<>
+    <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:wght@400;500&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -369,73 +369,87 @@ export default function LogosPage() {
         }
       `}</style>
 
-      <div className="logos-page">
-        <div className="logos-container">
+    <div className="logos-page">
+      <div className="logos-container">
 
-          <div className="page-header">
-            <div>
-              <h1 className="page-title">All Logos</h1>
-              <p className="page-subtitle">Browse our complete collection</p>
-            </div>
-            <div className="sort-group">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">All Logos</h1>
+            <p className="page-subtitle">Browse our complete collection</p>
+          </div>
+          {/* <div className="sort-group">
               {SORT_OPTIONS.map(s => (
-                <button key={s.key} className={`sort-btn${sort === s.key ? " active" : ""}`} onClick={() => setSort(s.key)}>
+                <button key={s.key}
+                  className={`sort-btn${sort === s.key ? " active" : ""}`}
+                  onClick={() => setSort(s.key)}>
                   {s.icon} {s.label}
                 </button>
               ))}
-            </div>
-          </div>
-
-          <div className="alpha-row">
-            {ALPHABET.map(l => (
-              <button key={l} className={`alpha-btn${activeLetter === l ? " active" : ""}`} onClick={() => setActiveLetter(l)}>{l}</button>
-            ))}
-          </div>
-
-          <div className="cat-row">
-            {CATEGORIES.map(c => (
-              <button key={c} className={`cat-btn${activeCategory === c ? " active" : ""}`} onClick={() => setActiveCat(c)}>{c}</button>
-            ))}
-          </div>
-
-          {error ? (
-            <div className="error-state">
-              <p>Failed to load logos: {error}</p>
-              <button onClick={fetchLogos}>Try again</button>
-            </div>
-          ) : (
-            <div className="logos-grid">
-              {loading
-                ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
-                : logos.length === 0
-                  ? <div className="empty-state">No logos found for this filter.</div>
-                  : logos.map(logo => <LogoCard key={logo.id} logo={logo} />)
-              }
-            </div>
-          )}
-
-          {!error && !loading && logos.length > 0 && (
-            <div className="pagination">
-              <button className="page-btn" onClick={() => setPage(p => Math.max(1, p-1))} disabled={page === 1}>‹</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
-                .reduce((acc, n, idx, arr) => {
-                  if (idx > 0 && n - arr[idx-1] > 1) acc.push("…");
-                  acc.push(n);
-                  return acc;
-                }, [])
-                .map((n, i) =>
-                  n === "…"
-                    ? <span key={`e${i}`} className="page-ellipsis">…</span>
-                    : <button key={n} className={`page-btn${page === n ? " active" : ""}`} onClick={() => setPage(n)}>{n}</button>
-                )
-              }
-              <button className="page-btn" onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page === totalPages}>›</button>
-            </div>
-          )}
-
+            </div> */}
         </div>
+
+        <div className="alpha-row">
+          {ALPHABET.map(l => (
+            <button key={l}
+              className={`alpha-btn${activeLetter === l ? " active" : ""}`}
+              onClick={() => setActiveLetter(l)}>{l}</button>
+          ))}
+        </div>
+
+        <div className="cat-row">
+          {CATEGORIES.map(c => (
+            <button key={c}
+              className={`cat-btn${activeCategory === c ? " active" : ""}`}
+              onClick={() => setActiveCat(c)}>{c}</button>
+          ))}
+        </div>
+
+        {error ? (
+          <div className="error-state">
+            <p>Failed to load logos: {error}</p>
+            <button onClick={fetchAll}>Try again</button>
+          </div>
+        ) : (
+          <div className="logos-grid">
+            {loading
+              ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
+              : logos.length === 0
+                ? <div className="empty-state">No logos found for this filter.</div>
+                : logos.map(logo => <LogoCard key={logo.id} logo={logo} />)
+            }
+          </div>
+        )}
+
+        {!error && !loading && logos.length > 0 && (
+          <div className="pagination">
+            <button className="page-btn"
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}>‹</button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+              .reduce((acc, n, idx, arr) => {
+                if (idx > 0 && n - arr[idx - 1] > 1) acc.push("…");
+                acc.push(n);
+                return acc;
+              }, [])
+              .map((n, i) =>
+                n === "…"
+                  ? <span key={`e${i}`} className="page-ellipsis">…</span>
+                  : <button key={n}
+                    className={`page-btn${page === n ? " active" : ""}`}
+                    onClick={() => setPage(n)}>{n}</button>
+              )
+            }
+
+            <button className="page-btn"
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}>›</button>
+          </div>
+        )}
+
       </div>
-    </>
+    </div>
+  </>
   );
 }

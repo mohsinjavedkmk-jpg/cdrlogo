@@ -1,0 +1,35 @@
+model Logo {
+  id              String   @id @default(uuid())
+
+  logoName        String
+  slug            String   @unique
+  brand           String?
+  website         String?
+
+  category        String
+  industry        String?
+  country         String?
+  license         String?
+
+  description     String
+  history         String?
+
+  metaTitle       String?
+  metaDescription String?
+  altText         String?
+  focusKeywords   String?
+
+  tags            Json
+  brandColors     Json
+  files           Json
+
+  publishStatus   String   @default("Draft")
+  downloadCount   Int?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@index([category])
+  @@index([publishStatus])
+}

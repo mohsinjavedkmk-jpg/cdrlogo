@@ -1,8 +1,108 @@
+
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+
+model Logo {
+  id              String   @id @default(uuid())
+  favoritedBy User[] @relation("UserFavorites")
+  // ── Core identity ──────────────────────────────────────────────────────────
+  logoName        String
+  slug            String   @unique
+  brand           String?
+  website         String?
+
+  // ── Classification ─────────────────────────────────────────────────────────
+  category        String
+  industry        String?
+  country         String?
+  license         String?
+
+  // ── Content ────────────────────────────────────────────────────────────────
+  description     String
+  history         String?
+
+  // ── Taxonomy ───────────────────────────────────────────────────────────────
+  tags            Json     @default("[]")
+  brandColors     Json     @default("[]")
+
+  // ── File URLs ──────────────────────────────────────────────────────────────
+  // Public (CDN-accessible)
+  webpUrl         String?          // public/{slug}/*.webp  ← only public file
+
+  // Private (gated / signed-URL download)
+  svgUrl          String?          // separate/{slug}/*.svg
+  pngUrl          String?          // separate/{slug}/*.png
+  aiUrl           String?          // separate/{slug}/*.ai
+  cdrUrl          String?          // separate/{slug}/*.cdr
+
+  // ── SVG source code ────────────────────────────────────────────────────────
+  // Raw <svg>…</svg> markup extracted from the ZIP.
+  // Stored as Text so it can be served inline or used for server-side rendering.
+  svgContent      String?  @db.Text
+
+  // ── SEO ────────────────────────────────────────────────────────────────────
+  metaTitle       String?
+  metaDescription String?
+  altText         String?
+  focusKeywords   String?
+
+  // ── Publishing ─────────────────────────────────────────────────────────────
+  publishStatus   String   @default("Draft")
+
+  // "unlimited" or a numeric string e.g. "5", "100"
+  downloadCount   String   @default("unlimited")
+  downloadedNumberByPeople  Int      @default(0)
+
+  // ── Timestamps ─────────────────────────────────────────────────────────────
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // ── Indexes ────────────────────────────────────────────────────────────────
+  @@index([slug])
+  @@index([category])
+  @@index([publishStatus])
+}
+
+model Website {
+  id         String   @id @default(uuid())
+  categories String[]
+  navItems   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(uuid())
+
+  // ── Basic Info ─────────────────────────────
+  name      String?
+  email     String?  @unique
+  password  String?
+
+  // ── Auth Type ─────────────────────────────
+  // guest OR logged
+  type      String   @default("guest")
+
+  // ── Download Tracking ─────────────────────
+  downloadCountUsed   Int     @default(0)
+  downloadLimit       Int     @default(5) // guest = 5, logged = unlimited (or high)
+
+  // ── Favorites Relation ────────────────────
+  favorites Logo[] @relation("UserFavorites")
+
+  // ── Optional: Email Verification ──────────
+  isVerified        Boolean  @default(false)
+  verificationToken String?
+
+  // ── Timestamps ────────────────────────────
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

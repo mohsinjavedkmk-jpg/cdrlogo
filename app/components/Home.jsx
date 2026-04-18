@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
+import { useRouter } from "next/navigation";
 
 const popularSearches = [
   "Technology logos",
@@ -12,22 +13,38 @@ const popularSearches = [
 
 const formats = [
   { label: "CDR", cls: "fmt-cdr" },
-  { label: "AI",  cls: "fmt-ai"  },
+  { label: "AI", cls: "fmt-ai" },
   { label: "SVG", cls: "fmt-svg" },
   { label: "PNG", cls: "fmt-png" },
 ];
 
 export default function Home() {
   const [searchValue, setSearchValue] = useState("");
-  const [focused,     setFocused]     = useState(false);
-  const [ready,       setReady]       = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [ready, setReady] = useState(false);
   const { dark } = useTheme();
+
+  const router = useRouter();
 
   useEffect(() => {
     const t = setTimeout(() => setReady(true), 60);
     return () => clearTimeout(t);
   }, []);
 
+
+  const handleSearch = () => {
+  const q = searchValue.trim().toLowerCase();
+  if (!q) return;
+
+  const slug = q.replace(/\s+/g, "-"); // 👈 space → hyphen
+
+  router.push(`/search/${encodeURIComponent(slug)}`);
+};
+const handleKeyDown = (e) => {
+  if (e.key === "Enter") {
+    handleSearch();
+  }
+};
   return (
     <>
       <style>{`
@@ -279,7 +296,7 @@ export default function Home() {
         <div className="dot-grid" />
 
         <div className={`home-content${ready ? " ready" : ""}`}>
-<div  className="h-2"/>
+          <div className="h-2" />
           {/* Badge */}
           <div className="anim d0">
             <div className="badge">
@@ -323,8 +340,8 @@ export default function Home() {
               <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" strokeWidth="2.2"
                 strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
                 id="logo-search"
@@ -335,6 +352,7 @@ export default function Home() {
                 onChange={e => setSearchValue(e.target.value)}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
+                onKeyDown={handleKeyDown}
               />
               <span className="search-kbd">ESC</span>
             </div>
@@ -347,8 +365,8 @@ export default function Home() {
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
                   stroke="currentColor" strokeWidth="2"
                   strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-                  <polyline points="17 6 23 6 23 12"/>
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                  <polyline points="17 6 23 6 23 12" />
                 </svg>
                 Popular
               </span>
