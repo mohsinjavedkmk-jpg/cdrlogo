@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense } from "react";
 
-export default function VerifyPage() {
+// ✅ Split into inner component that uses useSearchParams
+function VerifyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-
   const token = searchParams.get("token");
 
   const [status, setStatus] = useState("loading");
@@ -21,9 +22,7 @@ export default function VerifyPage() {
 
     const verifyUser = async () => {
       try {
-        const res = await fetch(
-          `/api/auth/verify?token=${token}`
-        );
+        const res = await fetch(`/api/auth/verify?token=${token}`);
         const data = await res.json();
 
         if (data.status) {
@@ -46,26 +45,32 @@ export default function VerifyPage() {
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Email Verification</h1>
-
-        <p
-          style={{
-            ...styles.message,
-            color: status === "success" ? "#22c55e" : "#ef4444",
-          }}
-        >
+        <p style={{ ...styles.message, color: status === "success" ? "#22c55e" : "#ef4444" }}>
           {message}
         </p>
-
         {status === "success" && (
-          <button
-            style={styles.button}
-            onClick={() => router.push("/login")}
-          >
+          <button style={styles.button} onClick={() => router.push("/login")}>
             Go to Login
           </button>
         )}
       </div>
     </div>
+  );
+}
+
+// ✅ Outer component wraps with Suspense
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h1 style={styles.title}>Email Verification</h1>
+          <p style={{ ...styles.message, color: "#aaa" }}>Verifying...</p>
+        </div>
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   );
 }
 
@@ -84,14 +89,8 @@ const styles = {
     backgroundColor: "#111",
     boxShadow: "0 0 20px rgba(0,255,0,0.2)",
   },
-  title: {
-    color: "#fff",
-    marginBottom: "20px",
-  },
-  message: {
-    fontSize: "18px",
-    marginBottom: "20px",
-  },
+  title: { color: "#fff", marginBottom: "20px" },
+  message: { fontSize: "18px", marginBottom: "20px" },
   button: {
     padding: "10px 20px",
     backgroundColor: "#22c55e",
