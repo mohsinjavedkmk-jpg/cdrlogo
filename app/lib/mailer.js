@@ -12,7 +12,7 @@ export const sendVerificationEmail = async (email, token) => {
  const verifyUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/verify?token=${token}`;
 
   await transporter.sendMail({
-    from: `"Your App" <${process.env.EMAIL_USER}>`,
+    from: `"CDRLOGO" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: "Verify your email",
     html: `

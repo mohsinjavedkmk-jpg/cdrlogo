@@ -87,8 +87,11 @@ export async function POST(req) {
       },
     });
 
+    console.log(`New user registered: ${email} (ID: ${user.id}) ${verificationToken}`);
+
     // 6️⃣ Send verification email
     await sendVerificationEmail(email, verificationToken);
+
 
     // 📧 LOG EMAIL SENT
     await prisma.log.create({

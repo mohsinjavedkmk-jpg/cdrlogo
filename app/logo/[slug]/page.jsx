@@ -789,7 +789,7 @@ URL.revokeObjectURL(url);
                                         onChange={e => setAgreed(e.target.checked)}
                                     />
                                     <label htmlFor="agree" className="agree-text">
-                                        I agree to the <a href="/terms">Terms of Use</a>. Logos are for educational and reference purposes only.
+                                        I agree to the <Link href="/term">Terms of Use</Link>. Logos are for educational and reference purposes only.
                                     </label>
                                 </div>
 
