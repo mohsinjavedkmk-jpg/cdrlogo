@@ -57,7 +57,8 @@ export const ModelName = {
   Page: 'Page',
   Log: 'Log',
   LogoRequest: 'LogoRequest',
-  ContactMessage: 'ContactMessage'
+  ContactMessage: 'ContactMessage',
+  Blog: 'Blog'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -207,6 +208,23 @@ export const ContactMessageScalarFieldEnum = {
 } as const
 
 export type ContactMessageScalarFieldEnum = (typeof ContactMessageScalarFieldEnum)[keyof typeof ContactMessageScalarFieldEnum]
+
+
+export const BlogScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  slug: 'slug',
+  excerpt: 'excerpt',
+  content: 'content',
+  category: 'category',
+  coverEmoji: 'coverEmoji',
+  readTime: 'readTime',
+  published: 'published',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BlogScalarFieldEnum = (typeof BlogScalarFieldEnum)[keyof typeof BlogScalarFieldEnum]
 
 
 export const SortOrder = {

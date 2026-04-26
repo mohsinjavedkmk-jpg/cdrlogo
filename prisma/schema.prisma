@@ -202,3 +202,19 @@ model ContactMessage {
   @@index([status])
   @@index([email])
 }
+
+
+
+model Blog {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String   @db.Text
+  category    String
+  coverEmoji  String   @default("📝")
+  readTime    Int      @default(5)   // in minutes
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

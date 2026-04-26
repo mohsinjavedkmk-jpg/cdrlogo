@@ -76,3 +76,8 @@ export type LogoRequest = Prisma.LogoRequestModel
  * 
  */
 export type ContactMessage = Prisma.ContactMessageModel
+/**
+ * Model Blog
+ * 
+ */
+export type Blog = Prisma.BlogModel
