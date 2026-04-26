@@ -42,6 +42,7 @@ export async function GET(request) {
           coverEmoji: true,
           readTime: true,
           createdAt: true,
+           published: true,
         },
       }),
       prisma.blog.count({ where }),
@@ -66,7 +67,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { title, slug, excerpt, content, category, coverEmoji, readTime } = body;
+    const { title, slug, excerpt, content, category, coverEmoji, readTime ,published } = body;
+    console.log("Creating blog with slug:", published);
+
 
     if (!title || !slug || !excerpt || !content || !category) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -75,13 +78,13 @@ export async function POST(request) {
     const blog = await prisma.blog.create({
       data: {
         title,
-        slug,
+        slug:"/"+slug,
         excerpt,
         content,
         category,
         coverEmoji: coverEmoji || "📝",
         readTime: readTime || 5,
-        published: true,
+        published:published || true,
       },
     });
 

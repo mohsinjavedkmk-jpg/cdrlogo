@@ -16,6 +16,8 @@ import MediaLibrary from "../adminComponents/Media";
 import SiteSettings from "../adminComponents/SiteSetting";
 import ContactMessages from "../adminComponents/ContactMessages";
 import LogoRequests    from "../adminComponents/LogoRequest";
+import BlogManager from "../adminComponents/Blog";
+
 import { useRouter } from "next/navigation";
 
 // ── Page title map — keys MUST match the case used in setActive() calls ──
@@ -32,6 +34,7 @@ const PAGE_TITLES = {
   "SiteSettings": "Site Settings",
   "ContactMessages": "Contact Messages",
 "LogoRequests":    "Logo Requests",
+"BlogManager": "Blog Manager",
 
 };
 
@@ -96,6 +99,7 @@ export default function AdminPage() {
         return <SiteSettings dark={dark} />;
         case "ContactMessages": return <ContactMessages dark={dark} />;
 case "LogoRequests":    return <LogoRequests dark={dark} />;
+case "Blog": return <BlogManager dark={dark} />;
 
       default:
         return (

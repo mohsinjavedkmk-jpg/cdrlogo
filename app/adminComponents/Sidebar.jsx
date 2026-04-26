@@ -4,25 +4,27 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Upload, LayoutGrid, Droplets,
   Tag, Users, FileText, Navigation, Image,
-  Mail, Bookmark, Settings,Menu, X, ChevronRight
+  Mail, Bookmark, Settings, Menu, X, ChevronRight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // ── NAV_ITEMS ─────────────────────────────────────────────────────────────
 // key MUST exactly match the case string used in AdminPage's renderContent switch
 const NAV_ITEMS = [
-  { key: "dashboard",        label: "Dashboard",        icon: LayoutDashboard },
-  { key: "upload",           label: "Upload Logo",       icon: Upload },
-  { key: "LogoManagement",   label: "Logo Management",   icon: LayoutGrid },
-  { key: "categories",       label: "Categories",        icon: Tag },
-  { key: "watermark",        label: "Watermark",         icon: Droplets },
-  { key: "User",             label: "Users",             icon: Users },
-  { key: "ContactMessages",  label: "Contact Messages",  icon: Mail },
-  { key: "LogoRequests",     label: "Logo Requests",     icon: Bookmark },
-  { key: "Page/CMS",         label: "CMS / Pages",       icon: FileText },
-  { key: "Navigation/Menu",  label: "Navigation/Menu",   icon: Navigation },
-  { key: "Media Library",    label: "Media Library",     icon: Image },
-  { key: "SiteSettings",     label: "Site Settings",     icon: Settings },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "upload", label: "Upload Logo", icon: Upload },
+  { key: "LogoManagement", label: "Logo Management", icon: LayoutGrid },
+  { key: "categories", label: "Categories", icon: Tag },
+  { key: "watermark", label: "Watermark", icon: Droplets },
+  { key: "User", label: "Users", icon: Users },
+  { key: "Blog", label: "Blog", icon: FileText },
+  { key: "ContactMessages", label: "Contact Messages", icon: Mail },
+  { key: "LogoRequests", label: "Logo Requests", icon: Bookmark },
+  { key: "Page/CMS", label: "CMS / Pages", icon: FileText },
+  { key: "Navigation/Menu", label: "Navigation/Menu", icon: Navigation },
+  { key: "Media Library", label: "Media Library", icon: Image },
+  { key: "SiteSettings", label: "Site Settings", icon: Settings },
+
 ];
 
 export default function Sidebar({ active, setActive, dark }) {
@@ -213,10 +215,13 @@ export default function Sidebar({ active, setActive, dark }) {
       )}
 
       {/* Nav items */}
+   
       <nav style={{
         padding: "4px 8px",
         display: "flex", flexDirection: "column", gap: 2,
         flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden",
       }}>
         {NAV_ITEMS.map(item => <NavItem key={item.key} item={item} />)}
       </nav>
@@ -239,7 +244,13 @@ export default function Sidebar({ active, setActive, dark }) {
     return (
       <>
         <style>{`
-          button:hover .sidebar-tooltip { opacity: 1 !important; }
+    
+            button:hover .sidebar-tooltip { opacity: 1 !important; }
+  nav::-webkit-scrollbar { width: 3px; }
+  nav::-webkit-scrollbar-track { background: transparent; }
+  nav::-webkit-scrollbar-thumb { background: #22c55e33; border-radius: 99px; }
+  nav::-webkit-scrollbar-thumb:hover { background: #22c55e66; }
+
           .mobile-backdrop {
             position: fixed; inset: 0;
             background: #00000080; z-index: 100;
