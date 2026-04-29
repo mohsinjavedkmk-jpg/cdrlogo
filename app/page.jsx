@@ -7,12 +7,14 @@ import BrandCategories from './components/HomeBrandsCatageory'
 import TrendingLogos from './components/HomeTrendingLogo'
 import TopBrands from './components/HomeTopBrand'
 import Footer from './components/Footer'
+import PantoneColorPicker from './components/Pantone'
 
 function page() {
     return (
         <>
             <Navbar />
             <Home/>
+            <PantoneColorPicker/>
             <LogosPage/>
             <BrandCategories/>
             <HomeCatageory/>
