@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { sendVerificationEmail } from "../../../lib/mailer";
-
+import { sendEmailByTemplate } from "../../../lib/genral-mail";
 export async function POST(req) {
   try {
     const { name, email, password } = await req.json();
@@ -75,7 +75,7 @@ export async function POST(req) {
         downloadCountUsed: 0,
         downloadLimit: 5,
         isVerified: false,
-        verificationToken,
+       verificationToken,
       },
     });
 
@@ -90,7 +90,7 @@ export async function POST(req) {
     console.log(`New user registered: ${email} (ID: ${user.id}) ${verificationToken}`);
 
     // 6️⃣ Send verification email
-    await sendVerificationEmail(email, verificationToken);
+    await sendVerificationEmail(email,verificationToken);
 
 
     // 📧 LOG EMAIL SENT
@@ -100,7 +100,13 @@ export async function POST(req) {
         content: `Verification email sent to ${email}`,
       },
     });
-
+  
+      await sendEmailByTemplate({
+        to: email,
+        templateKey: "welcome_email",
+        variables: { name }
+      });
+  
     return NextResponse.json(
       {
         status: true,

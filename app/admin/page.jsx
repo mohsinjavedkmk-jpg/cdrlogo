@@ -18,8 +18,8 @@ import ContactMessages from "../adminComponents/ContactMessages";
 import LogoRequests    from "../adminComponents/LogoRequest";
 import BlogManager from "../adminComponents/Blog";
 import Report from "../adminComponents/Report";
-
 import { useRouter } from "next/navigation";
+import Email from "../adminComponents/EmailTemplate";
 
 // ── Page title map — keys MUST match the case used in setActive() calls ──
 const PAGE_TITLES = {
@@ -37,6 +37,7 @@ const PAGE_TITLES = {
 "LogoRequests":    "Logo Requests",
 "BlogManager": "Blog Manager",
 "DCMA/Report": "DCMA / Report",
+"Email Templates": "Email Templates"
 
 };
 
@@ -103,7 +104,7 @@ export default function AdminPage() {
 case "LogoRequests":    return <LogoRequests dark={dark} />;
 case "Blog": return <BlogManager dark={dark} />;
 case "DCMA/Report": return <Report dark={dark} />;
-
+case "Email Templates": return <Email dark={dark} />;
       default:
         return (
           <div style={{

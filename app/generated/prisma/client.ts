@@ -86,3 +86,8 @@ export type Blog = Prisma.BlogModel
  * 
  */
 export type Report = Prisma.ReportModel
+/**
+ * Model EmailTemplate
+ * 
+ */
+export type EmailTemplate = Prisma.EmailTemplateModel

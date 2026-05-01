@@ -13,7 +13,7 @@ const FORMAT_COLORS = {
   AI:  { color: "#f59e0b", bg: "rgba(245,158,11,.12)", border: "rgba(245,158,11,.25)" },
   CDR: { color: "#ef4444", bg: "rgba(239,68,68,.1)",   border: "rgba(239,68,68,.22)"  },
   SVG: { color: "#22c55e", bg: "rgba(34,197,94,.1)",   border: "rgba(34,197,94,.22)"  },
-  PNG: { color: "#3b82f6", bg: "rgba(59,130,246,.1)",  border: "rgba(59,130,246,.25)" },
+  PNG: { color: "#16A34A", bg: "rgba(59,130,246,.1)",  border: "rgba(59,130,246,.25)" },
 };
 
 function fmtDate(d) {
@@ -159,7 +159,7 @@ export default function LogoRequests({ dark }) {
             background: "rgba(59,130,246,.12)", border: "1px solid rgba(59,130,246,.22)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
             </svg>
           </div>
@@ -199,7 +199,7 @@ export default function LogoRequests({ dark }) {
               cursor: "pointer", border: "1px solid", transition: "all .15s",
               background: active ? "rgba(59,130,246,.12)" : surface2,
               borderColor: active ? "rgba(59,130,246,.35)" : border,
-              color: active ? "#3b82f6" : muted2,
+              color: active ? "#16A34A" : muted2,
               textTransform: "capitalize",
             }}>
               {f} <span style={{ opacity: .65 }}>({counts[f] ?? 0})</span>
@@ -226,7 +226,7 @@ export default function LogoRequests({ dark }) {
                 borderBottom: i < visible.length - 1 ? `1px solid ${border}` : "none",
                 cursor: "pointer", transition: "background .15s",
                 background: isOpen ? (dark ? "rgba(59,130,246,.06)" : "rgba(59,130,246,.04)") : "transparent",
-                borderLeft: `3px solid ${isOpen ? "#3b82f6" : "transparent"}`,
+                borderLeft: `3px solid ${isOpen ? "#16A34A" : "transparent"}`,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div style={{ minWidth: 0, flex: 1 }}>
@@ -249,7 +249,7 @@ export default function LogoRequests({ dark }) {
                       {req.websiteUrl && (
                         <a href={req.websiteUrl} target="_blank" rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 10, color: "#3b82f6", textDecoration: "none" }}>
+                          style={{ fontSize: 10, color: "#16A34A", textDecoration: "none" }}>
                           {req.websiteUrl.replace(/^https?:\/\//, "").split("/")[0]}
                         </a>
                       )}
@@ -285,7 +285,7 @@ export default function LogoRequests({ dark }) {
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: text }}>{selected.brandName}</div>
                   {selected.requesterEmail && (
-                    <div style={{ fontSize: 12, color: "#3b82f6", marginTop: 2 }}>{selected.requesterEmail}</div>
+                    <div style={{ fontSize: 12, color: "#16A34A", marginTop: 2 }}>{selected.requesterEmail}</div>
                   )}
                 </div>
                 <div>
@@ -304,7 +304,7 @@ export default function LogoRequests({ dark }) {
                   <div style={{ fontSize: 11 }}>
                     <span style={{ color: muted, fontWeight: 600 }}>Website: </span>
                     <a href={selected.websiteUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ color: "#3b82f6", textDecoration: "none" }}>
+                      style={{ color: "#16A34A", textDecoration: "none" }}>
                       {selected.websiteUrl}
                     </a>
                   </div>
@@ -379,7 +379,7 @@ export default function LogoRequests({ dark }) {
                 fontSize: 13, fontWeight: 700, border: "none", cursor: "pointer",
                 background: sending || !replyText.trim() || !selected.requesterEmail
                   ? surface2
-                  : "linear-gradient(135deg,#3b82f6,#2563eb)",
+                  : "linear-gradient(135deg,#16A34A,#16A34A)",
                 color: sending || !replyText.trim() || !selected.requesterEmail ? muted : "#fff",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
                 transition: "all .2s",

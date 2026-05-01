@@ -40,7 +40,7 @@ export async function POST(req) {
         email: email.trim(),
         subject: subject?.trim() || null,
         message: message.trim(),
-        status: "unread",
+        status: "pending",
       },
     });
 

@@ -621,7 +621,7 @@ useEffect(() => {
                     <div className="terms-row">
                       <input type="checkbox" className="terms-check" id="terms" required />
                       <label htmlFor="terms" className="terms-text">
-                        I agree to the <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
+                        I agree to the <a href="/term">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>
                       </label>
                     </div>
                     <button type="submit" className="auth-btn" disabled={signupLoading}>

@@ -229,3 +229,24 @@ model Report {
 
   @@map("reports")
 }
+
+enum EmailTemplateStatus {
+  ACTIVE
+  DRAFT
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique   // machine key e.g. "welcome_email"
+  title       String             // human-readable title
+  description String             // short subtitle shown in list
+  subject     String             // email subject line
+  content     String   
+  status      EmailTemplateStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+

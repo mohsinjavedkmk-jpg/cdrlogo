@@ -1,4 +1,5 @@
 import { prisma } from "../../../../lib/prisma";
+import { sendEmailByTemplate } from "../../../../lib/genral-mail";
 
 const FILE_MAP = {
   svg: { field: "svgUrl", mime: "image/svg+xml", ext: "svg" },
@@ -42,6 +43,8 @@ export async function POST(req) {
             content: `Download blocked - limit reached`,
           },
         });
+
+
 
         return Response.json(
           { error: "Download limit reached" },
@@ -146,6 +149,22 @@ export async function POST(req) {
         content: `Downloaded logo ${logo.slug} in ${format}`,
       },
     });
+
+            // ── SEND CONFIRMATION EMAIL (only for logged-in users) ────
+if (userRecord) {
+  sendEmailByTemplate({
+    to: userinfo.email,
+    templateKey: "download_confirmation",
+    variables: {
+      name: userinfo.name,              // {{name}}
+      logoName: logo.name || logo.slug, // {{logoName}}
+      format: format.toUpperCase(),     // {{format}}
+      email: userinfo.email,            // {{email}}
+    },
+  }).catch((err) => {
+    console.error("[download] Email send failed:", err.message);
+  });
+}
 
     // ── RETURN FILE ──────────────────────────────────────────
     return new Response(upstream.body, {

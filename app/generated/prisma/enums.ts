@@ -15,3 +15,11 @@ export const ContactStatus = {
 } as const
 
 export type ContactStatus = (typeof ContactStatus)[keyof typeof ContactStatus]
+
+
+export const EmailTemplateStatus = {
+  ACTIVE: 'ACTIVE',
+  DRAFT: 'DRAFT'
+} as const
+
+export type EmailTemplateStatus = (typeof EmailTemplateStatus)[keyof typeof EmailTemplateStatus]
