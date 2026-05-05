@@ -13,6 +13,8 @@ export default function LogoDetail() {
     const router = useRouter();
     const { dark } = useTheme();
     const { data: session, status } = useSession();
+    const [isFavourited, setIsFavourited] = useState(false);
+    const [favLoading, setFavLoading] = useState(false);
 
     const [logo, setLogo] = useState(null);
     const [related, setRelated] = useState([]);
@@ -39,6 +41,39 @@ export default function LogoDetail() {
         return () => clearTimeout(t);
     }, []);
 
+    const handleFavourite = async () => {
+        if (!session?.user?.id) {
+            alert("Please sign in to save favourites.");
+            return;
+        }
+        if (favLoading) return;
+
+        // ── Optimistic update — flip instantly, revert on failure ──
+        const prev = isFavourited;
+        setIsFavourited(!prev);      // ← UI updates immediately
+        setFavLoading(true);
+
+        try {
+            const res = await fetch("/api/logo/favourite/toggle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ logoId: logo.id }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setIsFavourited(data.favourited); // confirm server state
+            } else {
+                setIsFavourited(prev);            // revert on error
+                alert(data.error || "Failed to update favourite");
+            }
+        } catch {
+            setIsFavourited(prev);              // revert on network error
+            alert("Network error. Try again.");
+        } finally {
+            setFavLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!slug) return;
         async function fetchLogo() {
@@ -64,6 +99,17 @@ export default function LogoDetail() {
         fetchLogo();
     }, [slug]);
 
+    useEffect(() => {
+        if (!logo?.id || !session?.user?.id) return;
+        fetch("/api/logo/favourite/status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ logoId: logo.id }),
+        })
+            .then(r => r.json())
+            .then(d => setIsFavourited(d.favourited));
+    }, [logo?.id, session?.user?.id]);
+
     // ── Static format badges — always show all 4 ─────────────────────────
     const formatBadges = [
         { key: "ai", label: "AI", cls: "fmt-ai", icon: "AI", sizeKey: "aifilesize" },
@@ -74,61 +120,61 @@ export default function LogoDetail() {
 
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-  const handleDownload = async () => {
-    if (!agreed || !logo?.id || !selectedFormat) return;
-    if (status === "loading") return;
-    setDownloading(true);
+    const handleDownload = async () => {
+        if (!agreed || !logo?.id || !selectedFormat) return;
+        if (status === "loading") return;
+        setDownloading(true);
 
-    try {
-        const res = await fetch("/api/logo/download/default", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                logoId: logo.id,
-                format: selectedFormat,
-                user: session?.user?.id || "",
-            }),
-        });
+        try {
+            const res = await fetch("/api/logo/download/default", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    logoId: logo.id,
+                    format: selectedFormat,
+                    user: session?.user?.id || "",
+                }),
+            });
 
-        // ✅ FIX 1: Check if response is ok BEFORE reading as blob
-        if (!res.ok) {
-            const errData = await res.json();
-            const msg =
-                res.status === 403
-                    ? "⚠️ Download limit reached. Please sign in or upgrade."
-                    : res.status === 404
-                    ? `❌ File not available in ${selectedFormat.toUpperCase()} format.`
-                    : `❌ Download failed: ${errData?.error || "Unknown error"}`;
-            alert(msg);
-            return;
+            // ✅ FIX 1: Check if response is ok BEFORE reading as blob
+            if (!res.ok) {
+                const errData = await res.json();
+                const msg =
+                    res.status === 403
+                        ? "⚠️ Download limit reached. Please sign in or upgrade."
+                        : res.status === 404
+                            ? `❌ File not available in ${selectedFormat.toUpperCase()} format.`
+                            : `❌ Download failed: ${errData?.error || "Unknown error"}`;
+                alert(msg);
+                return;
+            }
+
+            // ✅ FIX 2: Verify we actually got a file (not JSON disguised as blob)
+            const contentType = res.headers.get("Content-Type") || "";
+            if (contentType.includes("application/json")) {
+                const errData = await res.json();
+                alert(`❌ Download failed: ${errData?.error || "Unknown error"}`);
+                return;
+            }
+
+            // ✅ Safe to read as blob now
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${logo.slug}.${selectedFormat}`;
+            document.body.appendChild(a); // ✅ FIX 3: Must append to DOM for Firefox
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+        } catch (e) {
+            console.error("Download failed", e);
+            alert("❌ Network error. Please try again.");
+        } finally {
+            setDownloading(false);
         }
-
-        // ✅ FIX 2: Verify we actually got a file (not JSON disguised as blob)
-        const contentType = res.headers.get("Content-Type") || "";
-        if (contentType.includes("application/json")) {
-            const errData = await res.json();
-            alert(`❌ Download failed: ${errData?.error || "Unknown error"}`);
-            return;
-        }
-
-        // ✅ Safe to read as blob now
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${logo.slug}.${selectedFormat}`;
-        document.body.appendChild(a); // ✅ FIX 3: Must append to DOM for Firefox
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-    } catch (e) {
-        console.error("Download failed", e);
-        alert("❌ Network error. Please try again.");
-    } finally {
-        setDownloading(false);
-    }
-};
+    };
     const handleCopySvg = () => {
         if (!logo?.svgContent) return;
         navigator.clipboard.writeText(logo.svgContent);
@@ -518,6 +564,23 @@ export default function LogoDetail() {
   }
   [data-theme="dark"] .related-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
 
+  .fav-btn {
+  position: absolute; top: 10px; left: 10px;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px;
+  transition: transform .2s, background .2s;
+  z-index: 5;
+}
+[data-theme="light"] .fav-btn {
+  background: rgba(255,255,255,0.75);
+  border-color: rgba(0,0,0,0.1);
+}
+.fav-btn:hover { transform: scale(1.15); }
+.fav-btn.active { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
+
   .related-img-wrap {
     width: 100%; aspect-ratio: 1 / 1;
     display: flex; align-items: center; justify-content: center;
@@ -597,15 +660,31 @@ export default function LogoDetail() {
                     <div className={`layout${ready ? " ready" : ""}`}>
                         {/* ── LEFT ── */}
                         <div className="left">
-                            <div className="preview-card anim d0">
-
-                                <button
-                                    className="report-flag-btn"
+<div className="preview-card anim d0">
+  <button
+    className={`fav-btn${isFavourited ? " active" : ""}`}
+    onClick={handleFavourite}
+    disabled={favLoading}
+    title={isFavourited ? "Remove from favourites" : "Add to favourites"}
+  >
+    <svg
+      width="16" height="16" viewBox="0 0 24 24"
+      fill={isFavourited ? "#ef4444" : "none"}
+      stroke={isFavourited ? "#ef4444" : "currentColor"}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ transition: "fill .2s, stroke .2s" }}
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  </button>
+  <button
+    className="report-flag-btn"
                                     onClick={() => setReportOpen(true)}
                                     title="Report this logo"
                                 >
                                     🚩
                                 </button>
+                              
 
 
                                 <div className="preview-img-wrap">
@@ -866,79 +945,79 @@ export default function LogoDetail() {
                 <Footer />
             </div>
             {reportOpen && (
-  <div className="report-overlay" onClick={() => setReportOpen(false)}>
-    <div
-      data-theme={dark ? "dark" : "light"}
-      className="report-modal"
-      onClick={e => e.stopPropagation()}
-    >
-      <div className="report-modal-header">
-        <div className="report-modal-title">
-          🚩 Report Logo
-        </div>
-        <button className="report-modal-close" onClick={() => setReportOpen(false)}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
+                <div className="report-overlay" onClick={() => setReportOpen(false)}>
+                    <div
+                        data-theme={dark ? "dark" : "light"}
+                        className="report-modal"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="report-modal-header">
+                            <div className="report-modal-title">
+                                🚩 Report Logo
+                            </div>
+                            <button className="report-modal-close" onClick={() => setReportOpen(false)}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                    <line x1="18" y1="6" x2="6" y2="18" />
+                                    <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                            </button>
+                        </div>
 
-      <div className="report-logo-pill">
-        📁 {logo.logoName}
-      </div>
+                        <div className="report-logo-pill">
+                            📁 {logo.logoName}
+                        </div>
 
-      {reportDone ? (
-        <div className="report-success">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="9 12 11 14 15 10"/>
-          </svg>
-          Report submitted successfully
-        </div>
-      ) : (
-        <>
-          <div className="report-label">Reason for reporting</div>
-          <textarea
-            className="report-textarea"
-            rows={4}
-            placeholder="e.g. Trademark infringement, copyright violation, unauthorized use…"
-            value={reportReason}
-            onChange={e => setReportReason(e.target.value)}
-          />
+                        {reportDone ? (
+                            <div className="report-success">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="9 12 11 14 15 10" />
+                                </svg>
+                                Report submitted successfully
+                            </div>
+                        ) : (
+                            <>
+                                <div className="report-label">Reason for reporting</div>
+                                <textarea
+                                    className="report-textarea"
+                                    rows={4}
+                                    placeholder="e.g. Trademark infringement, copyright violation, unauthorized use…"
+                                    value={reportReason}
+                                    onChange={e => setReportReason(e.target.value)}
+                                />
 
-          <div className="report-label">Your contact email</div>
-          <input
-            type="email"
-            className="report-input"
-            placeholder="legal@yourcompany.com"
-            value={reportEmail}
-            onChange={e => setReportEmail(e.target.value)}
-          />
+                                <div className="report-label">Your contact email</div>
+                                <input
+                                    type="email"
+                                    className="report-input"
+                                    placeholder="legal@yourcompany.com"
+                                    value={reportEmail}
+                                    onChange={e => setReportEmail(e.target.value)}
+                                />
 
-          <button
-            className="report-submit-btn"
-            onClick={handleReport}
-            disabled={!reportReason.trim() || !reportEmail.trim() || reportSubmitting}
-          >
-            {reportSubmitting ? (
-              <>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                  style={{ animation: "spin 1s linear infinite" }}>
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </svg>
-                Submitting…
-              </>
-            ) : "Submit Report"}
-          </button>
-        </>
-      )}
-    </div>
-  </div>
-)}
+                                <button
+                                    className="report-submit-btn"
+                                    onClick={handleReport}
+                                    disabled={!reportReason.trim() || !reportEmail.trim() || reportSubmitting}
+                                >
+                                    {reportSubmitting ? (
+                                        <>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                                                style={{ animation: "spin 1s linear infinite" }}>
+                                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                            </svg>
+                                            Submitting…
+                                        </>
+                                    ) : "Submit Report"}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
         </>
     );
 }

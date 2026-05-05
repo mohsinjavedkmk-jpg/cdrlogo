@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "next-sitemap",
     "start": "next start",
     "lint": "eslint"
   },
@@ -45,6 +46,7 @@
     "mongoose": "^9.4.1",
     "next": "16.2.3",
     "next-auth": "^4.24.14",
+    "next-sitemap": "^4.2.3",
     "nodemailer": "^7.0.13",
     "prosemirror-model": "^1.25.4",
     "prosemirror-state": "^1.4.4",

@@ -5,7 +5,9 @@ import {
   LayoutDashboard, Upload, LayoutGrid, Droplets,
   Tag, Users, FileText, Navigation, Image,
   Mail, Bookmark, Settings, Menu, X, ChevronRight,
-  Key
+  Key,
+  Folder,
+  Heart
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -20,19 +22,20 @@ const NAV_ITEMS = [
   { key: "LogoManagement", label: "Logo Management", icon: LayoutGrid },
 
   // 🏷️ Organization
-  { key: "categories", label: "Categories", icon: Tag },
+  { key: "categories", label: "Categories", icon: Folder },
   { key: "Tags", label: "Tags", icon: Tag },
 
   // 👥 Users & interactions
   { key: "User", label: "Users", icon: Users },
   { key: "ContactMessages", label: "Contact Messages", icon: Mail },
   { key: "LogoRequests", label: "Logo Requests", icon: Bookmark },
+  {key:"Favourites", label:"Favourites", icon: Heart},
 
   // ⚠️ Moderation / Legal (important but less frequent)
   { key: "DCMA/Report", label: "DCMA / Report", icon: Menu },
 
   // 📝 Content management
-  { key: "Blog", label: "Blog", icon: FileText },
+  { key: "Blog", label: "Blog", icon: Image },
   { key: "Page/CMS", label: "CMS / Pages", icon: FileText },
   { key: "Navigation/Menu", label: "Navigation/Menu", icon: Navigation },
 

@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import Email from "../adminComponents/EmailTemplate";
 import Tags from "../adminComponents/Tag";
 import ApiReference from "../adminComponents/Api";
+import AdminFavourites from "../adminComponents/Favourite";
 
 // ── Page title map — keys MUST match the case used in setActive() calls ──
 const PAGE_TITLES = {
@@ -41,7 +42,8 @@ const PAGE_TITLES = {
   "BlogManager": "Blog Manager",
   "DCMA/Report": "DCMA / Report",
   "Email Templates": "Email Templates",
-  "Api Integration": "Api Integration"
+  "Api Integration": "Api Integration",
+  "Favourites":"Favourites"
 
 };
 
@@ -111,6 +113,7 @@ export default function AdminPage() {
       case "Email Templates": return <Email dark={dark} />;
       case "Tags": return <Tags dark={dark} />;
       case "Api Integration" : return <ApiReference dark={dark} />;
+      case "Favourites": return <AdminFavourites dark={dark} />;
       default:
         return (
           <div style={{
