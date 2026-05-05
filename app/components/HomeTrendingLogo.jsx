@@ -151,7 +151,7 @@ export default function TrendingLogos() {
           --tl-sk:rgba(255,255,255,0.07);
         }
         [data-theme="light"]{
-          --tl-bg:#ffffff;--tl-surface:#ffffff;
+          --tl-bg: #f4f4f8;--tl-surface:#ffffff;
           --tl-border:rgba(0,0,0,0.07);--tl-border-h:rgba(0,0,0,0.14);
           --tl-title:#0a0a14;--tl-subtitle:rgba(0,0,0,0.42);
           --tl-name:#111120;--tl-category:rgba(0,0,0,0.42);
