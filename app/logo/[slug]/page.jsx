@@ -48,9 +48,8 @@ export default function LogoDetail() {
         }
         if (favLoading) return;
 
-        // ── Optimistic update — flip instantly, revert on failure ──
         const prev = isFavourited;
-        setIsFavourited(!prev);      // ← UI updates immediately
+        setIsFavourited(!prev);
         setFavLoading(true);
 
         try {
@@ -61,13 +60,13 @@ export default function LogoDetail() {
             });
             const data = await res.json();
             if (res.ok) {
-                setIsFavourited(data.favourited); // confirm server state
+                setIsFavourited(data.favourited);
             } else {
-                setIsFavourited(prev);            // revert on error
+                setIsFavourited(prev);
                 alert(data.error || "Failed to update favourite");
             }
         } catch {
-            setIsFavourited(prev);              // revert on network error
+            setIsFavourited(prev);
             alert("Network error. Try again.");
         } finally {
             setFavLoading(false);
@@ -85,7 +84,6 @@ export default function LogoDetail() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ slug }),
                 });
-
                 const data = await res.json();
                 setLogo(data.data || data);
                 console.log("Fetched logo data:", data);
@@ -110,15 +108,12 @@ export default function LogoDetail() {
             .then(d => setIsFavourited(d.favourited));
     }, [logo?.id, session?.user?.id]);
 
-    // ── Static format badges — always show all 4 ─────────────────────────
     const formatBadges = [
-        { key: "ai", label: "AI", cls: "fmt-ai", icon: "AI", sizeKey: "aifilesize" },
+        { key: "ai",  label: "AI",  cls: "fmt-ai",  icon: "AI",  sizeKey: "aifilesize"  },
         { key: "cdr", label: "CDR", cls: "fmt-cdr", icon: "CDR", sizeKey: "cdrfilesize" },
         { key: "svg", label: "SVG", cls: "fmt-svg", icon: "SVG", sizeKey: "svgfilesize" },
         { key: "png", label: "PNG", cls: "fmt-png", icon: "PNG", sizeKey: "pngfilesize" },
     ];
-
-    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
     const handleDownload = async () => {
         if (!agreed || !logo?.id || !selectedFormat) return;
@@ -136,7 +131,6 @@ export default function LogoDetail() {
                 }),
             });
 
-            // ✅ FIX 1: Check if response is ok BEFORE reading as blob
             if (!res.ok) {
                 const errData = await res.json();
                 const msg =
@@ -149,7 +143,6 @@ export default function LogoDetail() {
                 return;
             }
 
-            // ✅ FIX 2: Verify we actually got a file (not JSON disguised as blob)
             const contentType = res.headers.get("Content-Type") || "";
             if (contentType.includes("application/json")) {
                 const errData = await res.json();
@@ -157,13 +150,12 @@ export default function LogoDetail() {
                 return;
             }
 
-            // ✅ Safe to read as blob now
             const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
             a.download = `${logo.slug}.${selectedFormat}`;
-            document.body.appendChild(a); // ✅ FIX 3: Must append to DOM for Firefox
+            document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
@@ -175,6 +167,7 @@ export default function LogoDetail() {
             setDownloading(false);
         }
     };
+
     const handleCopySvg = () => {
         if (!logo?.svgContent) return;
         navigator.clipboard.writeText(logo.svgContent);
@@ -234,6 +227,7 @@ export default function LogoDetail() {
             setReportSubmitting(false);
         }
     };
+
     if (loading) return <LoadingSkeleton dark={dark} />;
     if (error) return <ErrorState dark={dark} message={error} onBack={() => router.back()} />;
     if (!logo) return null;
@@ -280,106 +274,107 @@ export default function LogoDetail() {
   .fmt-select-size { font-size: 8px; font-weight: 600; color: var(--muted); opacity: 0.75; letter-spacing: .3px; }
 
   /* ── Report flag button ── */
-.preview-card { position: relative; }
-.report-flag-btn {
-  position: absolute; top: 10px; right: 10px;
-  width: 30px; height: 30px; border-radius: 8px;
-  background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.12);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 14px;
-  opacity: 0; transform: translateY(-4px);
-  transition: opacity .2s, transform .2s;
-  z-index: 5;
-}
-[data-theme="light"] .report-flag-btn {
-  background: rgba(255,255,255,0.75);
-  border-color: rgba(0,0,0,0.1);
-}
-.preview-card:hover .report-flag-btn {
-  opacity: 1; transform: translateY(0);
-}
+  .preview-card { position: relative; }
+  .report-flag-btn {
+    position: absolute; top: 10px; right: 10px;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 14px;
+    opacity: 0; transform: translateY(-4px);
+    transition: opacity .2s, transform .2s;
+    z-index: 5;
+  }
+  [data-theme="light"] .report-flag-btn {
+    background: rgba(255,255,255,0.75);
+    border-color: rgba(0,0,0,0.1);
+  }
+  .preview-card:hover .report-flag-btn {
+    opacity: 1; transform: translateY(0);
+  }
 
-/* ── Report modal overlay ── */
-.report-overlay {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.report-modal {
-  width: 100%; max-width: 420px;
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  border-radius: 16px; padding: 22px;
-  font-family: 'Sora', sans-serif;
-  animation: report-in .18s cubic-bezier(.22,1,.36,1);
-}
-@keyframes report-in {
-  from { opacity:0; transform: scale(.96) translateY(8px); }
-  to   { opacity:1; transform: scale(1) translateY(0); }
-}
-.report-modal-header {
-  display: flex; align-items: center;
-  justify-content: space-between; margin-bottom: 16px;
-}
-.report-modal-title {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 14px; font-weight: 800; color: var(--heading);
-}
-.report-modal-close {
-  width: 26px; height: 26px; border-radius: 7px;
-  border: 1px solid var(--border); background: var(--input-bg);
-  cursor: pointer; color: var(--muted);
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s, color .15s;
-}
-.report-modal-close:hover { background: var(--surface2); color: var(--heading); }
-.report-logo-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 4px 10px; border-radius: 100px;
-  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
-  font-size: 11px; font-weight: 600; color: #ef4444;
-  margin-bottom: 16px;
-}
-.report-label {
-  font-size: 11px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: .5px;
-  margin-bottom: 6px; margin-top: 12px;
-}
-.report-label:first-of-type { margin-top: 0; }
-.report-textarea {
-  width: 100%; padding: 10px 12px;
-  background: var(--input-bg); border: 1px solid var(--border);
-  border-radius: 9px; color: var(--heading);
-  font-family: 'DM Sans', sans-serif; font-size: 13px;
-  line-height: 1.6; resize: none; outline: none;
-  transition: border-color .2s;
-}
-.report-textarea:focus { border-color: rgba(239,68,68,.4); }
-.report-input {
-  width: 100%; padding: 9px 12px;
-  background: var(--input-bg); border: 1px solid var(--border);
-  border-radius: 9px; color: var(--heading);
-  font-family: 'DM Sans', sans-serif; font-size: 13px;
-  outline: none; transition: border-color .2s;
-}
-.report-input:focus { border-color: rgba(239,68,68,.4); }
-.report-submit-btn {
-  width: 100%; margin-top: 16px; padding: 11px;
-  border-radius: 10px; border: none; cursor: pointer;
-  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff; transition: opacity .2s, transform .15s;
-  display: flex; align-items: center; justify-content: center; gap: 7px;
-}
-.report-submit-btn:hover { opacity: .9; transform: translateY(-1px); }
-.report-submit-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-.report-success {
-  text-align: center; padding: 16px 0 4px;
-  font-size: 13px; color: #22c55e; font-weight: 600;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-} 
+  /* ── Report modal overlay ── */
+  .report-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .report-modal {
+    width: 100%; max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px; padding: 22px;
+    font-family: 'Sora', sans-serif;
+    animation: report-in .18s cubic-bezier(.22,1,.36,1);
+  }
+  @keyframes report-in {
+    from { opacity:0; transform: scale(.96) translateY(8px); }
+    to   { opacity:1; transform: scale(1) translateY(0); }
+  }
+  .report-modal-header {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 16px;
+  }
+  .report-modal-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 800; color: var(--heading);
+  }
+  .report-modal-close {
+    width: 26px; height: 26px; border-radius: 7px;
+    border: 1px solid var(--border); background: var(--input-bg);
+    cursor: pointer; color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s;
+  }
+  .report-modal-close:hover { background: var(--surface2); color: var(--heading); }
+  .report-logo-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 100px;
+    background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+    font-size: 11px; font-weight: 600; color: #ef4444;
+    margin-bottom: 16px;
+  }
+  .report-label {
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 6px; margin-top: 12px;
+  }
+  .report-label:first-of-type { margin-top: 0; }
+  .report-textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--heading);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    line-height: 1.6; resize: none; outline: none;
+    transition: border-color .2s;
+  }
+  .report-textarea:focus { border-color: rgba(239,68,68,.4); }
+  .report-input {
+    width: 100%; padding: 9px 12px;
+    background: var(--input-bg); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--heading);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    outline: none; transition: border-color .2s;
+  }
+  .report-input:focus { border-color: rgba(239,68,68,.4); }
+  .report-submit-btn {
+    width: 100%; margin-top: 16px; padding: 11px;
+    border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff; transition: opacity .2s, transform .15s;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .report-submit-btn:hover { opacity: .9; transform: translateY(-1px); }
+  .report-submit-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .report-success {
+    text-align: center; padding: 16px 0 4px;
+    font-size: 13px; color: #22c55e; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+
   .dot-grid {
     position: fixed; inset: 0;
     background-image: radial-gradient(var(--dot) 1px, transparent 1px);
@@ -400,22 +395,22 @@ export default function LogoDetail() {
   .breadcrumb-sep { opacity: 0.4; }
   .breadcrumb-current { color: var(--body); font-weight: 600; }
 
+  /* ── Symmetric two-column layout ── */
   .layout {
     position: relative; z-index: 1;
     max-width: 1100px; margin: 0 auto;
     padding: 20px 24px 0;
     display: grid;
-    grid-template-columns: 420px 1fr 300px;
+    grid-template-columns: 1fr 1fr;
     gap: 20px;
     align-items: start;
   }
 
   .left { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px; align-self: start; }
-  .mid  { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px; align-self: start; }
 
   .preview-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; position: relative; width: 100%; }
   .preview-img-wrap {
-    width: 100%; aspect-ratio: 1 / 1; max-height: 380px;
+    width: 100%; aspect-ratio: 1 / 1;
     display: flex; align-items: center; justify-content: center;
     padding: 32px;
     background: repeating-conic-gradient(rgba(128,128,128,0.06) 0% 25%, transparent 0% 50%) 0 0 / 20px 20px;
@@ -520,9 +515,25 @@ export default function LogoDetail() {
   .color-copy-btn.copied { color: #22c55e; border-color: rgba(34,197,94,.4); }
 
   .ad-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 11px; font-family: 'DM Sans', sans-serif; min-height: 120px; opacity: .5; }
-  .ad-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 
-  /* ── Related logos section ─────────────────────────────────────────── */
+  .fav-btn {
+    position: absolute; top: 10px; left: 10px;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 15px;
+    transition: transform .2s, background .2s;
+    z-index: 5;
+  }
+  [data-theme="light"] .fav-btn {
+    background: rgba(255,255,255,0.75);
+    border-color: rgba(0,0,0,0.1);
+  }
+  .fav-btn:hover { transform: scale(1.15); }
+  .fav-btn.active { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
+
+  /* ── Related logos section ── */
   .related-section {
     position: relative; z-index: 1;
     max-width: 1100px; margin: 40px auto 0;
@@ -564,23 +575,6 @@ export default function LogoDetail() {
   }
   [data-theme="dark"] .related-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
 
-  .fav-btn {
-  position: absolute; top: 10px; left: 10px;
-  width: 30px; height: 30px; border-radius: 8px;
-  background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.12);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; font-size: 15px;
-  transition: transform .2s, background .2s;
-  z-index: 5;
-}
-[data-theme="light"] .fav-btn {
-  background: rgba(255,255,255,0.75);
-  border-color: rgba(0,0,0,0.1);
-}
-.fav-btn:hover { transform: scale(1.15); }
-.fav-btn.active { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.4); }
-
   .related-img-wrap {
     width: 100%; aspect-ratio: 1 / 1;
     display: flex; align-items: center; justify-content: center;
@@ -593,7 +587,6 @@ export default function LogoDetail() {
   .related-body { padding: 8px 10px 10px; }
   .related-name { font-size: 12px; font-weight: 700; color: var(--heading); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
 
-  /* static format pills on related card */
   .related-formats { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 5px; }
   .rf-tag { padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: 700; border: 1px solid; letter-spacing: .2px; }
   .rf-ai  { background:rgba(234,179,8,.08);  border-color:rgba(234,179,8,.25); color:#f59e0b; }
@@ -612,9 +605,7 @@ export default function LogoDetail() {
   .d3{transition-delay:180ms;} .d4{transition-delay:240ms;}
 
   /* ── Responsive ── */
-  @media (max-width: 1024px) { .layout { grid-template-columns: 380px 1fr; } .mid { display: none; } }
-  @media (max-width: 900px)  { .layout { grid-template-columns: 1fr; } .left { position: static; } }
-  @media (max-width: 768px)  {
+  @media (max-width: 768px) {
     .layout { grid-template-columns: 1fr; padding: 16px 16px 0; }
     .left { position: static; }
     .preview-img-wrap { padding: 20px; }
@@ -658,34 +649,33 @@ export default function LogoDetail() {
                     </nav>
 
                     <div className={`layout${ready ? " ready" : ""}`}>
+
                         {/* ── LEFT ── */}
                         <div className="left">
-<div className="preview-card anim d0">
-  <button
-    className={`fav-btn${isFavourited ? " active" : ""}`}
-    onClick={handleFavourite}
-    disabled={favLoading}
-    title={isFavourited ? "Remove from favourites" : "Add to favourites"}
-  >
-    <svg
-      width="16" height="16" viewBox="0 0 24 24"
-      fill={isFavourited ? "#ef4444" : "none"}
-      stroke={isFavourited ? "#ef4444" : "currentColor"}
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      style={{ transition: "fill .2s, stroke .2s" }}
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  </button>
-  <button
-    className="report-flag-btn"
+                            <div className="preview-card anim d0">
+                                <button
+                                    className={`fav-btn${isFavourited ? " active" : ""}`}
+                                    onClick={handleFavourite}
+                                    disabled={favLoading}
+                                    title={isFavourited ? "Remove from favourites" : "Add to favourites"}
+                                >
+                                    <svg
+                                        width="16" height="16" viewBox="0 0 24 24"
+                                        fill={isFavourited ? "#ef4444" : "none"}
+                                        stroke={isFavourited ? "#ef4444" : "currentColor"}
+                                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                                        style={{ transition: "fill .2s, stroke .2s" }}
+                                    >
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                                    </svg>
+                                </button>
+                                <button
+                                    className="report-flag-btn"
                                     onClick={() => setReportOpen(true)}
                                     title="Report this logo"
                                 >
                                     🚩
                                 </button>
-                              
-
 
                                 <div className="preview-img-wrap">
                                     {logo.webpUrl ? (
@@ -743,9 +733,9 @@ export default function LogoDetail() {
                             <div className="card anim d2">
                                 <div className="info-grid">
                                     {[
-                                        { icon: "🏷️", label: "Brand", value: logo.brand || "—" },
+                                        { icon: "🏷️", label: "Brand",    value: logo.brand    || "—" },
                                         { icon: "⚙️", label: "Industry", value: logo.industry || "—" },
-                                        { icon: "🌍", label: "Country", value: logo.country || "—" },
+                                        { icon: "🌍", label: "Country",  value: logo.country  || "—" },
                                         { icon: "📁", label: "Category", value: logo.category || "—" },
                                     ].map(item => (
                                         <div key={item.label} className="info-cell">
@@ -762,11 +752,6 @@ export default function LogoDetail() {
                             <div className="ad-card anim d3" />
                         </div>
 
-                        {/* ── MIDDLE ── */}
-                        <div className="mid">
-                            <div className="ad-card" style={{ minHeight: 400 }} />
-                        </div>
-
                         {/* ── RIGHT ── */}
                         <div className="right">
                             <div className="dl-card anim d0">
@@ -781,7 +766,6 @@ export default function LogoDetail() {
                                 </div>
                                 <div className="dl-sub">Choose your preferred format</div>
 
-                                {/* ── Format selector — always AI CDR SVG PNG ── */}
                                 <div className="fmt-select-grid">
                                     {formatBadges.map(fmt => (
                                         <button
@@ -890,7 +874,7 @@ export default function LogoDetail() {
                         </div>
                     </div>
 
-                    {/* ── RELATED LOGOS ─────────────────────────────────────────────── */}
+                    {/* ── RELATED LOGOS ── */}
                     {related.length > 0 && (
                         <div className="related-section">
                             <div className="related-header">
@@ -918,7 +902,6 @@ export default function LogoDetail() {
                                             </div>
                                             <div className="related-body">
                                                 <div className="related-name">{rel.brand || rel.logoName}</div>
-                                                {/* Static format pills — always show all 4 */}
                                                 <div className="related-formats">
                                                     <span className="rf-tag rf-ai">AI</span>
                                                     <span className="rf-tag rf-cdr">CDR</span>
@@ -944,6 +927,7 @@ export default function LogoDetail() {
                 </div>
                 <Footer />
             </div>
+
             {reportOpen && (
                 <div className="report-overlay" onClick={() => setReportOpen(false)}>
                     <div
@@ -952,26 +936,20 @@ export default function LogoDetail() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="report-modal-header">
-                            <div className="report-modal-title">
-                                🚩 Report Logo
-                            </div>
+                            <div className="report-modal-title">🚩 Report Logo</div>
                             <button className="report-modal-close" onClick={() => setReportOpen(false)}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                     <line x1="18" y1="6" x2="6" y2="18" />
                                     <line x1="6" y1="6" x2="18" y2="18" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div className="report-logo-pill">
-                            📁 {logo.logoName}
-                        </div>
+                        <div className="report-logo-pill">📁 {logo.logoName}</div>
 
                         {reportDone ? (
                             <div className="report-success">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                     <circle cx="12" cy="12" r="10" />
                                     <polyline points="9 12 11 14 15 10" />
                                 </svg>
@@ -987,7 +965,6 @@ export default function LogoDetail() {
                                     value={reportReason}
                                     onChange={e => setReportReason(e.target.value)}
                                 />
-
                                 <div className="report-label">Your contact email</div>
                                 <input
                                     type="email"
@@ -996,7 +973,6 @@ export default function LogoDetail() {
                                     value={reportEmail}
                                     onChange={e => setReportEmail(e.target.value)}
                                 />
-
                                 <button
                                     className="report-submit-btn"
                                     onClick={handleReport}
@@ -1004,9 +980,7 @@ export default function LogoDetail() {
                                 >
                                     {reportSubmitting ? (
                                         <>
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                                                style={{ animation: "spin 1s linear infinite" }}>
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
                                                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                                             </svg>
                                             Submitting…

@@ -549,7 +549,7 @@ useEffect(() => {
                   <div className="success-title">Account Created!</div>
                   <div className="success-sub">Welcome to cdrlogo. Check your email to verify your account, then sign in.</div>
                   <button className="auth-btn" style={{ marginTop: 8 }} onClick={() => { setTab("login"); setSignupSuccess(false); }}>
-                    Go to Sign In →
+                  Verify your email &  Sign In →
                   </button>
                 </div>
               ) : (
