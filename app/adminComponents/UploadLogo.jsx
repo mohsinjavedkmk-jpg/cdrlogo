@@ -35,16 +35,20 @@ function FileIcon() {
 
 export default function UploadLogo({ dark }) {
   const fileInputRef = useRef(null);
+  const tagInputRef = useRef(null);
 
   const [dragging, setDragging] = useState(false);
   const [files, setFiles] = useState([]);
   const [colors, setColors] = useState(COLORS_INIT);
   const [newColor, setNewColor] = useState("#ffffff");
 
-  // ── Tags — fetched from backend ──────────────────────────────────
-  const [availableTags, setAvailableTags] = useState([]);  // all tags from Website.tags
+  // ── Tags ─────────────────────────────────────────────────────────
+  const [availableTags, setAvailableTags] = useState([]);
   const [tagsLoading, setTagsLoading] = useState(true);
-  const [selectedTags, setSelectedTags] = useState([]);    // tags chosen for this logo
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [newTagInput, setNewTagInput] = useState("");
+  const [creatingTag, setCreatingTag] = useState(false);
+  const [tagError, setTagError] = useState("");
 
   const [publishStatus, setPublishStatus] = useState("Draft");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -150,11 +154,57 @@ export default function UploadLogo({ dark }) {
   const handleBrowse = (e) => { addFiles(e.target.files); e.target.value = ""; };
   const removeFile = (id) => setFiles(prev => prev.filter(x => x.id !== id));
 
-  // ── tag toggle (select / deselect) ────────────────────────────────
+  // ── tag toggle ────────────────────────────────────────────────────
   const toggleTag = (tag) => {
     setSelectedTags(prev =>
       prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
     );
+  };
+
+  // ── create new tag inline ─────────────────────────────────────────
+  const handleCreateTag = async () => {
+    const trimmed = newTagInput.trim();
+    if (!trimmed) return;
+
+    // duplicate check
+    if (availableTags.map(t => t.toLowerCase()).includes(trimmed.toLowerCase())) {
+      setTagError("Tag already exists.");
+      setTimeout(() => setTagError(""), 2000);
+      // just select it if not selected
+      const existing = availableTags.find(t => t.toLowerCase() === trimmed.toLowerCase());
+      if (existing && !selectedTags.includes(existing)) toggleTag(existing);
+      setNewTagInput("");
+      return;
+    }
+
+    setCreatingTag(true);
+    setTagError("");
+    try {
+      const res = await fetch("/api/admin/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create tag");
+
+      // data.tags is the full updated list from the server
+      const updated = data.tags ?? [...availableTags, trimmed];
+      setAvailableTags(updated);
+      // auto-select the new tag
+      setSelectedTags(prev => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+      setNewTagInput("");
+      tagInputRef.current?.focus();
+    } catch (err) {
+      setTagError(err.message);
+      setTimeout(() => setTagError(""), 3000);
+    } finally {
+      setCreatingTag(false);
+    }
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); handleCreateTag(); }
   };
 
   // ── colors ────────────────────────────────────────────────────────
@@ -185,7 +235,7 @@ export default function UploadLogo({ dark }) {
       fd.append("license",         form.license);
       fd.append("description",     form.description);
       fd.append("history",         form.history);
-      fd.append("tags",            JSON.stringify(selectedTags));  // ← only selected tags
+      fd.append("tags",            JSON.stringify(selectedTags));
       fd.append("brandColors",     JSON.stringify(colors));
       fd.append("metaTitle",       form.metaTitle);
       fd.append("metaDescription", form.metaDescription);
@@ -223,7 +273,7 @@ export default function UploadLogo({ dark }) {
     }
   };
 
-  // ── toggle ────────────────────────────────────────────────────────
+  // ── Toggle ────────────────────────────────────────────────────────
   const Toggle = ({ on, toggle, label }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <div onClick={toggle} style={{
@@ -440,8 +490,9 @@ export default function UploadLogo({ dark }) {
           </div>
         </div>
 
-        {/* ── Tags — fetched from Website.tags ── */}
+        {/* ── Tags ── */}
         <div style={{ background: card, borderRadius: 12, border: `1px solid ${border}`, padding: 20 }}>
+
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, flexWrap: "wrap", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -451,11 +502,10 @@ export default function UploadLogo({ dark }) {
               <div>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: text }}>Tags</h3>
                 <p style={{ margin: 0, fontSize: 11, color: muted }}>
-                  {tagsLoading ? "Loading tags..." : `${selectedTags.length} of ${availableTags.length} selected`}
+                  {tagsLoading ? "Loading tags..." : `${selectedTags.length} selected · ${availableTags.length} available`}
                 </p>
               </div>
             </div>
-            {/* Clear all */}
             {selectedTags.length > 0 && (
               <button
                 onClick={() => setSelectedTags([])}
@@ -472,7 +522,78 @@ export default function UploadLogo({ dark }) {
             )}
           </div>
 
-          {/* Loading skeleton */}
+          {/* ── Create new tag inline ── */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{
+              display: "flex", gap: 7, alignItems: "center",
+            }}>
+              <div style={{
+                flex: 1, display: "flex", alignItems: "center", gap: 7,
+                background: inputBg, border: `1px solid ${tagError ? "#ef4444" : inputBdr}`,
+                borderRadius: 8, padding: "0 10px",
+                transition: "border-color 0.15s",
+              }}>
+                <Tag size={12} color={muted} style={{ flexShrink: 0 }} />
+                <input
+                  ref={tagInputRef}
+                  value={newTagInput}
+                  onChange={e => { setNewTagInput(e.target.value); setTagError(""); }}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Type a new tag and press Enter or click Add…"
+                  maxLength={40}
+                  disabled={creatingTag}
+                  style={{
+                    flex: 1, background: "none", border: "none", outline: "none",
+                    fontSize: 12, color: text, fontFamily: "'DM Sans', sans-serif",
+                    padding: "8px 0",
+                  }}
+                />
+                {newTagInput && (
+                  <button
+                    onClick={() => setNewTagInput("")}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: muted, padding: 0, display: "flex", flexShrink: 0 }}
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleCreateTag}
+                disabled={creatingTag || !newTagInput.trim()}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "0 14px", height: 36, borderRadius: 8,
+                  border: "none", cursor: creatingTag || !newTagInput.trim() ? "not-allowed" : "pointer",
+                  background: creatingTag || !newTagInput.trim()
+                    ? (dark ? "#1e2535" : "#e2e8f0")
+                    : `linear-gradient(135deg, #22c55e, #16a34a)`,
+                  color: creatingTag || !newTagInput.trim() ? muted : "#fff",
+                  fontSize: 12, fontWeight: 700,
+                  fontFamily: "'DM Sans', sans-serif",
+                  flexShrink: 0,
+                  transition: "all 0.15s",
+                  boxShadow: creatingTag || !newTagInput.trim() ? "none" : "0 2px 8px rgba(34,197,94,0.3)",
+                }}
+              >
+                {creatingTag
+                  ? <Loader2 size={12} style={{ animation: "spin 0.8s linear infinite" }} />
+                  : <Plus size={12} />}
+                {creatingTag ? "Adding…" : "Add Tag"}
+              </button>
+            </div>
+
+            {/* inline error */}
+            {tagError && (
+              <p style={{ margin: "5px 0 0 2px", fontSize: 11, color: "#ef4444", fontFamily: "'DM Sans', sans-serif" }}>
+                ⚠ {tagError}
+              </p>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: border, marginBottom: 12 }} />
+
+          {/* Existing tags — selectable pills */}
           {tagsLoading ? (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {Array.from({ length: 10 }).map((_, i) => (
@@ -485,17 +606,11 @@ export default function UploadLogo({ dark }) {
               ))}
             </div>
           ) : availableTags.length === 0 ? (
-            /* Empty state */
-            <div style={{
-              textAlign: "center", padding: "24px 0",
-              color: muted, fontSize: 12,
-            }}>
-              <Tag size={20} color={muted} style={{ marginBottom: 8, display: "block", margin: "0 auto 8px" }} />
-              <p style={{ margin: 0, fontWeight: 600, color: text, fontSize: 13 }}>No tags available</p>
-              <p style={{ margin: "4px 0 0" }}>Go to Tag Manager to add tags first.</p>
+            <div style={{ textAlign: "center", padding: "20px 0", color: muted, fontSize: 12 }}>
+              <p style={{ margin: 0, fontWeight: 600, color: text, fontSize: 13 }}>No tags yet</p>
+              <p style={{ margin: "4px 0 0" }}>Create your first tag using the input above.</p>
             </div>
           ) : (
-            /* Selectable tag pills */
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               {availableTags.map(tag => {
                 const active = selectedTags.includes(tag);
@@ -511,8 +626,7 @@ export default function UploadLogo({ dark }) {
                       color: active ? green : text,
                       fontSize: 12, fontWeight: active ? 700 : 500,
                       cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-                      transition: "all 0.15s",
-                      outline: "none",
+                      transition: "all 0.15s", outline: "none",
                     }}
                   >
                     {active && (
@@ -527,12 +641,9 @@ export default function UploadLogo({ dark }) {
             </div>
           )}
 
-          {/* Selected preview */}
+          {/* Selected preview strip */}
           {selectedTags.length > 0 && (
-            <div style={{
-              marginTop: 14, paddingTop: 14,
-              borderTop: `1px solid ${border}`,
-            }}>
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${border}` }}>
               <p style={{ margin: "0 0 8px", fontSize: 11, fontWeight: 600, color: muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Selected ({selectedTags.length})
               </p>
