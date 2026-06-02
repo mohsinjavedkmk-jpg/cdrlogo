@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcrypt";
 import { prisma } from "../../../lib/prisma";
 
@@ -9,6 +10,10 @@ export const authOptions = {
   },
 
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -21,7 +26,6 @@ export const authOptions = {
           throw new Error("Email and password required");
         }
 
-        // 🔍 Find user (PRISMA)
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -30,7 +34,6 @@ export const authOptions = {
           throw new Error("User not found");
         }
 
-        // 🔐 Check password
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
@@ -40,18 +43,16 @@ export const authOptions = {
           throw new Error("Invalid password");
         }
 
-        // 🚨 Check verification
         if (!user.isVerified) {
           throw new Error("Please verify your email first");
         }
 
-        // ✅ Return user
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           type: user.type,
-          role:user.role
+          role: user.role,
         };
       },
     }),
@@ -62,26 +63,44 @@ export const authOptions = {
   },
 
   callbacks: {
-    // JWT
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
         token.type = user.type;
-        token.role=user.role;
+        token.role = user.role;
       }
-      return token;
-    },
 
-    // Session
+      if (account?.provider === "google") {
+        const dbUser = await prisma.user.upsert({
+          where: { email: token.email },
+          update: { name: token.name },
+          create: {
+            email: token.email,
+            name: token.name,
+            isVerified: true,
+            password: "",
+            type: "user",
+            role: "user",
+          },
+        });
+
+        token.id = dbUser.id;
+        token.type = dbUser.type;
+        token.role = dbUser.role;
+      }
+
+      return token;
+    },                             // ✅ fixed: comma was missing here
+
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.email = token.email;
         session.user.type = token.type;
-        session.user.role=token.role;
+        session.user.role = token.role;
       }
       return session;
     },

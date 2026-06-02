@@ -6,6 +6,43 @@ import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 
+// ── Reusable Google Button ──────────────────────────────────────────────────
+function GoogleButton({ label = "Continue with Google" }) {
+  return (
+    <>
+      {/* Divider */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        margin: "14px 0 12px",
+      }}>
+        <div style={{ flex: 1, height: 1, background: "var(--glass-bdr)" }} />
+        <span style={{
+          fontSize: 11, color: "var(--muted)",
+          fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap",
+        }}>
+          or continue with
+        </span>
+        <div style={{ flex: 1, height: 1, background: "var(--glass-bdr)" }} />
+      </div>
+
+      {/* Button */}
+      <button
+        type="button"
+        onClick={() => signIn("google", { callbackUrl: "/" })}
+        className="google-btn"
+      >
+        {/* Official Google "G" logo */}
+        <svg width="15" height="15" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        {label}
+      </button>
+    </>
+  );
+}
 
 export default function Login() {
   const { dark } = useTheme();
@@ -34,53 +71,47 @@ export default function Login() {
     return () => clearTimeout(t);
   }, []);
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoginError("");
-  if (!loginEmail || !loginPassword) {
-    setLoginError("Please fill in all fields.");
-    return;
-  }
-  setLoginLoading(true);
-  try {
-    const res = await signIn("credentials", {
-      email: loginEmail,
-      password: loginPassword,
-      redirect: false,        // ✅ CRITICAL — prevents the page flash/redirect
-    });
-
-    if (res?.error) {
-      // Map next-auth error codes to friendly messages
-      const messages = {
-        "Please verify your email first": "Please verify your email before signing in.",
-        "User not found":    "No account found with that email.",
-        "Invalid password":  "Incorrect password. Please try again.",
-      };
-      setLoginError(messages[res.error] || "Login failed. Please try again.");
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError("");
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Please fill in all fields.");
       return;
     }
+    setLoginLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        email: loginEmail,
+        password: loginPassword,
+        redirect: false,
+      });
 
-    // ✅ Success — session useEffect will handle redirect
-  } catch (err) {
-    setLoginError("Something went wrong. Please try again.");
-  } finally {
-    setLoginLoading(false);
-  }
-};
-
-useEffect(() => {
-  if (status === "loading") return; // wait for session
-
-  if (session?.user && status === "authenticated") {
-    if (session.user.role === "admin") {
-      console.log("Admin logged in, redirecting to admin dashboard...");
-      router.push("/admin");
-    } else {
-      console.log("User logged in, redirecting to homepage...");
-      router.push("/");
+      if (res?.error) {
+        const messages = {
+          "Please verify your email first": "Please verify your email before signing in.",
+          "User not found": "No account found with that email.",
+          "Invalid password": "Incorrect password. Please try again.",
+        };
+        setLoginError(messages[res.error] || "Login failed. Please try again.");
+        return;
+      }
+    } catch (err) {
+      setLoginError("Something went wrong. Please try again.");
+    } finally {
+      setLoginLoading(false);
     }
-  }
-}, [session, status, router]);
+  };
+
+  useEffect(() => {
+    if (status === "loading") return;
+    if (session?.user && status === "authenticated") {
+      if (session.user.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
+    }
+  }, [session, status, router]);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -162,14 +193,12 @@ useEffect(() => {
           position: relative; overflow: hidden;
         }
 
-        /* ── Background ── */
         .auth-bg-mesh {
           position: fixed; inset: 0; z-index: 0; pointer-events: none;
           background-image: radial-gradient(var(--dot) 1px, transparent 1px);
           background-size: 28px 28px;
         }
 
-        /* Animated gradient orbs */
         .orb {
           position: fixed; border-radius: 50%;
           pointer-events: none; z-index: 0;
@@ -204,7 +233,6 @@ useEffect(() => {
           66%      { transform: translateX(-50%) translateY(10px) scale(0.97); }
         }
 
-        /* ── Layout ── */
         .auth-center {
           position: relative; z-index: 1;
           flex: 1; display: flex;
@@ -212,13 +240,11 @@ useEffect(() => {
           padding: 100px 20px 60px;
         }
 
-        /* ── Glass card ── */
         .auth-card {
           width: 100%; max-width: 400px;
           position: relative;
           border-radius: 24px;
           overflow: hidden;
-          /* Layered glass effect */
           background: var(--glass);
           border: 1px solid var(--glass-bdr);
           backdrop-filter: blur(24px) saturate(160%);
@@ -235,7 +261,6 @@ useEffect(() => {
             0 0 40px var(--card-glow);
         }
 
-        /* Top shimmer line */
         .auth-card::before {
           content: '';
           position: absolute; top: 0; left: 0; right: 0; height: 1.5px;
@@ -249,7 +274,6 @@ useEffect(() => {
           100% { background-position:  200% 0; }
         }
 
-        /* Inner shine overlay */
         .auth-card::after {
           content: '';
           position: absolute; top: 0; left: 0; right: 0; height: 50%;
@@ -258,7 +282,6 @@ useEffect(() => {
           z-index: 1;
         }
 
-        /* ── Logo / Header ── */
         .auth-header {
           position: relative; z-index: 3;
           padding: 28px 28px 20px;
@@ -266,20 +289,14 @@ useEffect(() => {
           border-bottom: 1px solid var(--glass-bdr);
           text-align: center;
         }
-        .auth-logo-wrap {
-          margin-bottom: 6px;
-        }
-        .auth-title {
-          font-size: 18px; font-weight: 800;
-          color: var(--heading); letter-spacing: -0.4px;
-        }
+        .auth-logo-wrap { margin-bottom: 6px; }
+        .auth-title { font-size: 18px; font-weight: 800; color: var(--heading); letter-spacing: -0.4px; }
         .auth-subtitle {
           font-family: 'DM Sans', sans-serif;
           font-size: 12px; color: var(--muted); line-height: 1.5;
           max-width: 260px;
         }
 
-        /* ── Tabs ── */
         .auth-tabs {
           position: relative; z-index: 3;
           display: grid; grid-template-columns: 1fr 1fr;
@@ -307,7 +324,6 @@ useEffect(() => {
         .auth-tab.active { color: var(--heading); background: var(--tab-active); }
         .auth-tab.active::after { transform: scaleX(1); }
 
-        /* ── Form body ── */
         .auth-body {
           position: relative; z-index: 3;
           padding: 22px 24px 24px;
@@ -322,10 +338,7 @@ useEffect(() => {
           letter-spacing: 0.6px; margin-bottom: 5px;
         }
         .input-wrap { position: relative; display: flex; align-items: center; }
-        .input-icon {
-          position: absolute; left: 11px;
-          color: var(--muted); pointer-events: none;
-        }
+        .input-icon { position: absolute; left: 11px; color: var(--muted); pointer-events: none; }
         .auth-input {
           width: 100%;
           padding: 10px 13px 10px 36px;
@@ -356,14 +369,12 @@ useEffect(() => {
         }
         .pw-toggle:hover { color: var(--body); }
 
-        /* Strength bar */
         .pw-strength { display: flex; gap: 4px; margin-top: 6px; }
         .pw-bar { height: 2.5px; flex: 1; border-radius: 2px; background: var(--input-bdr); transition: background 0.3s; }
         .pw-bar.weak   { background: #ef4444; }
         .pw-bar.medium { background: #f59e0b; }
         .pw-bar.strong { background: #07A626; }
 
-        /* Error */
         .auth-error {
           display: flex; align-items: center; gap: 7px;
           padding: 9px 12px;
@@ -378,14 +389,12 @@ useEffect(() => {
         }
         @keyframes slide-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
 
-        /* Terms */
         .terms-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; margin-top: 2px; }
         .terms-check { width: 14px; height: 14px; margin-top: 1px; flex-shrink: 0; accent-color: #07A626; cursor: pointer; }
         .terms-text { font-size: 11px; color: var(--muted); font-family: 'DM Sans', sans-serif; line-height: 1.5; }
         .terms-text a { color: #07A626; text-decoration: none; font-weight: 600; }
         .terms-text a:hover { text-decoration: underline; }
 
-        /* Submit button */
         .auth-btn {
           width: 100%; padding: 11.5px;
           border: none; border-radius: 11px; cursor: pointer;
@@ -407,7 +416,26 @@ useEffect(() => {
         .auth-btn:active:not(:disabled) { transform: translateY(0); }
         .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        /* Footer */
+        /* ── Google Button ── */
+        .google-btn {
+          width: 100%; padding: 10px 13px;
+          display: flex; align-items: center; justify-content: center; gap: 9px;
+          background: var(--input-bg);
+          border: 1px solid var(--input-bdr);
+          border-radius: 11px; cursor: pointer;
+          font-family: 'Sora', sans-serif;
+          font-size: 12.5px; font-weight: 600;
+          color: var(--heading);
+          backdrop-filter: blur(8px);
+          transition: border-color 0.2s, box-shadow 0.2s, background 0.2s, transform 0.15s;
+        }
+        .google-btn:hover {
+          border-color: rgba(7,166,38,0.5);
+          box-shadow: 0 0 0 3px rgba(7,166,38,0.08);
+          transform: translateY(-1px);
+        }
+        .google-btn:active { transform: translateY(0); }
+
         .auth-footer {
           position: relative; z-index: 3;
           text-align: center;
@@ -418,7 +446,6 @@ useEffect(() => {
         .auth-footer a { color: #07A626; font-weight: 700; text-decoration: none; }
         .auth-footer a:hover { text-decoration: underline; }
 
-        /* Success */
         .signup-success {
           position: relative; z-index: 3;
           padding: 32px 24px;
@@ -426,8 +453,7 @@ useEffect(() => {
           align-items: center; gap: 12px; text-align: center;
         }
         .success-ring {
-          width: 58px; height: 58px;
-          border-radius: 50%;
+          width: 58px; height: 58px; border-radius: 50%;
           background: rgba(7,166,38,0.10);
           border: 1.5px solid rgba(7,166,38,0.3);
           display: flex; align-items: center; justify-content: center;
@@ -439,7 +465,6 @@ useEffect(() => {
         .success-title { font-size: 17px; font-weight: 800; color: var(--heading); letter-spacing: -0.3px; }
         .success-sub { font-size: 12.5px; color: var(--muted); font-family: 'DM Sans', sans-serif; line-height: 1.6; max-width: 270px; }
 
-        /* Card entrance */
         .anim { opacity:0; transform:translateY(20px);
           transition: opacity .55s cubic-bezier(.22,1,.36,1), transform .55s cubic-bezier(.22,1,.36,1); }
         .ready .anim { opacity:1; transform:translateY(0); }
@@ -536,6 +561,9 @@ useEffect(() => {
                     }
                   </button>
                 </form>
+
+                {/* ✅ Google sign-in */}
+                <GoogleButton label="Continue with Google" />
               </div>
             )}
 
@@ -549,7 +577,7 @@ useEffect(() => {
                   <div className="success-title">Account Created!</div>
                   <div className="success-sub">Welcome to cdrlogo. Check your email to verify your account, then sign in.</div>
                   <button className="auth-btn" style={{ marginTop: 8 }} onClick={() => { setTab("login"); setSignupSuccess(false); }}>
-                  Verify your email &  Sign In →
+                    Verify your email & Sign In →
                   </button>
                 </div>
               ) : (
@@ -631,6 +659,9 @@ useEffect(() => {
                       }
                     </button>
                   </form>
+
+                  {/* ✅ Google sign-up */}
+                  <GoogleButton label="Sign up with Google" />
                 </div>
               )
             )}
