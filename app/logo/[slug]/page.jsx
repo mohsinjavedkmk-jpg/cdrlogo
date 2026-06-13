@@ -110,7 +110,7 @@ export default function LogoDetail() {
     }, [logo?.id, session?.user?.id]);
 
     const formatBadges = [
-        { key: "ai",  label: "AI",  cls: "fmt-ai",  icon: "AI",  sizeKey: "aifilesize"  },
+        { key: "ai", label: "AI", cls: "fmt-ai", icon: "AI", sizeKey: "aifilesize" },
         { key: "cdr", label: "CDR", cls: "fmt-cdr", icon: "CDR", sizeKey: "cdrfilesize" },
         { key: "svg", label: "SVG", cls: "fmt-svg", icon: "SVG", sizeKey: "svgfilesize" },
         { key: "png", label: "PNG", cls: "fmt-png", icon: "PNG", sizeKey: "pngfilesize" },
@@ -575,12 +575,38 @@ export default function LogoDetail() {
   }
   [data-theme="dark"] .related-card:hover { box-shadow: 0 10px 28px rgba(0,0,0,0.45); }
 
+
   .related-img-wrap {
     width: 100%; aspect-ratio: 1 / 1;
     display: flex; align-items: center; justify-content: center;
     padding: 16px;
     background: repeating-conic-gradient(rgba(128,128,128,0.05) 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
   }
+ .preview-img-wrap { position: relative; }
+
+.img-overlay-bar {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 10px 8px;
+  background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%);
+  pointer-events: none;
+}
+.img-fmt-pill {
+  font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+  backdrop-filter: blur(4px);
+  letter-spacing: 0.4px;
+}
+.img-dl-count {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
   .related-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
   .related-initials { font-size: 22px; font-weight: 900; color: var(--muted); letter-spacing: -1px; }
 
@@ -677,7 +703,23 @@ export default function LogoDetail() {
                                     ) : (
                                         <div className="preview-img-placeholder" dangerouslySetInnerHTML={{ __html: logo.svgContent || logo.logoName }} />
                                     )}
+
+                                    {/* ── Pinterest-style overlay bar ── */}
+                                    <div className="img-overlay-bar">
+                                        <span className="img-fmt-pill">
+                                            {selectedFormat ? selectedFormat.toUpperCase() : "SVG"}
+                                        </span>
+                                        <span className="img-dl-count">
+                                            <svg className=" text-black" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="7 10 12 15 17 10" />
+                                                <line x1="12" y1="15" x2="12" y2="3" />
+                                            </svg>
+                                           <span className=" text-black"> {logo.downloadedNumberByPeople || 0}</span>
+                                        </span>
+                                    </div>
                                 </div>
+
                                 <div className="meta-strip">
                                     <div className="meta-item">
                                         <svg className="meta-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -697,7 +739,9 @@ export default function LogoDetail() {
                                             <div>
                                                 <div className="meta-label">Website</div>
                                                 <div className="meta-value">
-                                                    <a href={logo.website} target="_blank" rel="noopener noreferrer">{logo.website.replace(/^https?:\/\//, '')}</a>
+                                                    <a href={logo.website} target="_blank" rel="noopener noreferrer">
+                                                        {logo.website.replace(/^https?:\/\//, '')}
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -713,7 +757,6 @@ export default function LogoDetail() {
                                     </div>
                                 </div>
                             </div>
-
                             <div className="card anim d1">
                                 <div className="card-title">About This Logo</div>
                                 <p className="about-text">{expandDesc ? logo.description : shortDesc}</p>
@@ -727,9 +770,9 @@ export default function LogoDetail() {
                             <div className="card anim d2">
                                 <div className="info-grid">
                                     {[
-                                        { icon: "🏷️", label: "Brand",    value: logo.brand    || "—" },
+                                        { icon: "🏷️", label: "Brand", value: logo.brand || "—" },
                                         { icon: "⚙️", label: "Industry", value: logo.industry || "—" },
-                                        { icon: "🌍", label: "Country",  value: logo.country  || "—" },
+                                        { icon: "🌍", label: "Country", value: logo.country || "—" },
                                         { icon: "📁", label: "Category", value: logo.category || "—" },
                                     ].map(item => (
                                         <div key={item.label} className="info-cell">
@@ -756,10 +799,10 @@ export default function LogoDetail() {
                                             <polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
                                         </svg>
                                     </div>
-                                    <div className="dl-title">Download {logo.logoName}</div> 
+                                    <div className="dl-title">Download {logo.logoName}</div>
 
                                 </div>
-                                <div className="dl-sub">Total number of downloads <span className="text-black">{logo.downloadedNumberByPeople}</span> </div>
+
                                 <div className="dl-sub">Choose your preferred format</div>
 
                                 <div className="fmt-select-grid">
@@ -842,7 +885,7 @@ export default function LogoDetail() {
                                                                 <div className="policy-label">FIRST NAME</div>
                                                                 <div className="policy-input-wrap">
                                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                                                                     </svg>
                                                                     <input
                                                                         className="policy-input"
@@ -857,7 +900,7 @@ export default function LogoDetail() {
                                                                 <div className="policy-label">LAST NAME</div>
                                                                 <div className="policy-input-wrap">
                                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                                                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
                                                                     </svg>
                                                                     <input
                                                                         className="policy-input"
@@ -874,7 +917,7 @@ export default function LogoDetail() {
                                                             <div className="policy-label">EMAIL ADDRESS</div>
                                                             <div className="policy-input-wrap">
                                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+                                                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
                                                                 </svg>
                                                                 <input
                                                                     className="policy-input"
@@ -918,7 +961,7 @@ export default function LogoDetail() {
                                                             ) : (
                                                                 <>
                                                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                                                        <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
                                                                     </svg>
                                                                     Submit Report
                                                                 </>
