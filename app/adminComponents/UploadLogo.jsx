@@ -411,7 +411,7 @@ export default function UploadLogo({ dark }) {
                 <label style={labelStyle}>License</label>
                 <select style={{ ...inputStyle, appearance: "none" }} value={form.license} onChange={setField("license")}>
                   <option value="">Select license</option>
-                  <option>Free for personal use</option><option>For Commerical use</option><option>Open Source</option>
+                  <option>Educational</option><option>Reference & Design Use Only </option>
                 </select>
               </div>
             </div>
