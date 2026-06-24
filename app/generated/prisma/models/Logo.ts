@@ -59,10 +59,15 @@ export type LogoMinAggregateOutputType = {
   metaTitle: string | null
   metaDescription: string | null
   altText: string | null
-  focusKeywords: string | null
   canonicalUrl: string | null
   ogImageUrl: string | null
-  schemaMarkup: string | null
+  ogTitle: string | null
+  ogDescription: string | null
+  ogType: string | null
+  twitterTitle: string | null
+  twitterDescription: string | null
+  twitterImage: string | null
+  twitterCardType: string | null
   publishStatus: string | null
   downloadCount: string | null
   downloadedNumberByPeople: number | null
@@ -95,10 +100,15 @@ export type LogoMaxAggregateOutputType = {
   metaTitle: string | null
   metaDescription: string | null
   altText: string | null
-  focusKeywords: string | null
   canonicalUrl: string | null
   ogImageUrl: string | null
-  schemaMarkup: string | null
+  ogTitle: string | null
+  ogDescription: string | null
+  ogType: string | null
+  twitterTitle: string | null
+  twitterDescription: string | null
+  twitterImage: string | null
+  twitterCardType: string | null
   publishStatus: string | null
   downloadCount: string | null
   downloadedNumberByPeople: number | null
@@ -133,11 +143,15 @@ export type LogoCountAggregateOutputType = {
   metaTitle: number
   metaDescription: number
   altText: number
-  focusKeywords: number
   canonicalUrl: number
   ogImageUrl: number
-  schemaMarkup: number
-  relatedSlugs: number
+  ogTitle: number
+  ogDescription: number
+  ogType: number
+  twitterTitle: number
+  twitterDescription: number
+  twitterImage: number
+  twitterCardType: number
   publishStatus: number
   downloadCount: number
   downloadedNumberByPeople: number
@@ -180,10 +194,15 @@ export type LogoMinAggregateInputType = {
   metaTitle?: true
   metaDescription?: true
   altText?: true
-  focusKeywords?: true
   canonicalUrl?: true
   ogImageUrl?: true
-  schemaMarkup?: true
+  ogTitle?: true
+  ogDescription?: true
+  ogType?: true
+  twitterTitle?: true
+  twitterDescription?: true
+  twitterImage?: true
+  twitterCardType?: true
   publishStatus?: true
   downloadCount?: true
   downloadedNumberByPeople?: true
@@ -216,10 +235,15 @@ export type LogoMaxAggregateInputType = {
   metaTitle?: true
   metaDescription?: true
   altText?: true
-  focusKeywords?: true
   canonicalUrl?: true
   ogImageUrl?: true
-  schemaMarkup?: true
+  ogTitle?: true
+  ogDescription?: true
+  ogType?: true
+  twitterTitle?: true
+  twitterDescription?: true
+  twitterImage?: true
+  twitterCardType?: true
   publishStatus?: true
   downloadCount?: true
   downloadedNumberByPeople?: true
@@ -254,11 +278,15 @@ export type LogoCountAggregateInputType = {
   metaTitle?: true
   metaDescription?: true
   altText?: true
-  focusKeywords?: true
   canonicalUrl?: true
   ogImageUrl?: true
-  schemaMarkup?: true
-  relatedSlugs?: true
+  ogTitle?: true
+  ogDescription?: true
+  ogType?: true
+  twitterTitle?: true
+  twitterDescription?: true
+  twitterImage?: true
+  twitterCardType?: true
   publishStatus?: true
   downloadCount?: true
   downloadedNumberByPeople?: true
@@ -380,11 +408,15 @@ export type LogoGroupByOutputType = {
   metaTitle: string | null
   metaDescription: string | null
   altText: string | null
-  focusKeywords: string | null
   canonicalUrl: string | null
   ogImageUrl: string | null
-  schemaMarkup: string | null
-  relatedSlugs: runtime.JsonValue
+  ogTitle: string | null
+  ogDescription: string | null
+  ogType: string | null
+  twitterTitle: string | null
+  twitterDescription: string | null
+  twitterImage: string | null
+  twitterCardType: string | null
   publishStatus: string
   downloadCount: string
   downloadedNumberByPeople: number
@@ -442,11 +474,15 @@ export type LogoWhereInput = {
   metaTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
   metaDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   altText?: Prisma.StringNullableFilter<"Logo"> | string | null
-  focusKeywords?: Prisma.StringNullableFilter<"Logo"> | string | null
   canonicalUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
   ogImageUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
-  schemaMarkup?: Prisma.StringNullableFilter<"Logo"> | string | null
-  relatedSlugs?: Prisma.JsonFilter<"Logo">
+  ogTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -482,11 +518,15 @@ export type LogoOrderByWithRelationInput = {
   metaTitle?: Prisma.SortOrderInput | Prisma.SortOrder
   metaDescription?: Prisma.SortOrderInput | Prisma.SortOrder
   altText?: Prisma.SortOrderInput | Prisma.SortOrder
-  focusKeywords?: Prisma.SortOrderInput | Prisma.SortOrder
   canonicalUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   ogImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  schemaMarkup?: Prisma.SortOrderInput | Prisma.SortOrder
-  relatedSlugs?: Prisma.SortOrder
+  ogTitle?: Prisma.SortOrderInput | Prisma.SortOrder
+  ogDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  ogType?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterTitle?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterImage?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterCardType?: Prisma.SortOrderInput | Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -525,11 +565,15 @@ export type LogoWhereUniqueInput = Prisma.AtLeast<{
   metaTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
   metaDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   altText?: Prisma.StringNullableFilter<"Logo"> | string | null
-  focusKeywords?: Prisma.StringNullableFilter<"Logo"> | string | null
   canonicalUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
   ogImageUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
-  schemaMarkup?: Prisma.StringNullableFilter<"Logo"> | string | null
-  relatedSlugs?: Prisma.JsonFilter<"Logo">
+  ogTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -565,11 +609,15 @@ export type LogoOrderByWithAggregationInput = {
   metaTitle?: Prisma.SortOrderInput | Prisma.SortOrder
   metaDescription?: Prisma.SortOrderInput | Prisma.SortOrder
   altText?: Prisma.SortOrderInput | Prisma.SortOrder
-  focusKeywords?: Prisma.SortOrderInput | Prisma.SortOrder
   canonicalUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   ogImageUrl?: Prisma.SortOrderInput | Prisma.SortOrder
-  schemaMarkup?: Prisma.SortOrderInput | Prisma.SortOrder
-  relatedSlugs?: Prisma.SortOrder
+  ogTitle?: Prisma.SortOrderInput | Prisma.SortOrder
+  ogDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  ogType?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterTitle?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterDescription?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterImage?: Prisma.SortOrderInput | Prisma.SortOrder
+  twitterCardType?: Prisma.SortOrderInput | Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -612,11 +660,15 @@ export type LogoScalarWhereWithAggregatesInput = {
   metaTitle?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   metaDescription?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   altText?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
-  focusKeywords?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   canonicalUrl?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   ogImageUrl?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
-  schemaMarkup?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
-  relatedSlugs?: Prisma.JsonWithAggregatesFilter<"Logo">
+  ogTitle?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  ogDescription?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  ogType?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  twitterTitle?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  twitterDescription?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  twitterImage?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  twitterCardType?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   publishStatus?: Prisma.StringWithAggregatesFilter<"Logo"> | string
   downloadCount?: Prisma.StringWithAggregatesFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntWithAggregatesFilter<"Logo"> | number
@@ -651,11 +703,15 @@ export type LogoCreateInput = {
   metaTitle?: string | null
   metaDescription?: string | null
   altText?: string | null
-  focusKeywords?: string | null
   canonicalUrl?: string | null
   ogImageUrl?: string | null
-  schemaMarkup?: string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: string | null
+  ogDescription?: string | null
+  ogType?: string | null
+  twitterTitle?: string | null
+  twitterDescription?: string | null
+  twitterImage?: string | null
+  twitterCardType?: string | null
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -691,11 +747,15 @@ export type LogoUncheckedCreateInput = {
   metaTitle?: string | null
   metaDescription?: string | null
   altText?: string | null
-  focusKeywords?: string | null
   canonicalUrl?: string | null
   ogImageUrl?: string | null
-  schemaMarkup?: string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: string | null
+  ogDescription?: string | null
+  ogType?: string | null
+  twitterTitle?: string | null
+  twitterDescription?: string | null
+  twitterImage?: string | null
+  twitterCardType?: string | null
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -731,11 +791,15 @@ export type LogoUpdateInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -771,11 +835,15 @@ export type LogoUncheckedUpdateInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -811,11 +879,15 @@ export type LogoCreateManyInput = {
   metaTitle?: string | null
   metaDescription?: string | null
   altText?: string | null
-  focusKeywords?: string | null
   canonicalUrl?: string | null
   ogImageUrl?: string | null
-  schemaMarkup?: string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: string | null
+  ogDescription?: string | null
+  ogType?: string | null
+  twitterTitle?: string | null
+  twitterDescription?: string | null
+  twitterImage?: string | null
+  twitterCardType?: string | null
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -850,11 +922,15 @@ export type LogoUpdateManyMutationInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -889,11 +965,15 @@ export type LogoUncheckedUpdateManyInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -928,11 +1008,15 @@ export type LogoCountOrderByAggregateInput = {
   metaTitle?: Prisma.SortOrder
   metaDescription?: Prisma.SortOrder
   altText?: Prisma.SortOrder
-  focusKeywords?: Prisma.SortOrder
   canonicalUrl?: Prisma.SortOrder
   ogImageUrl?: Prisma.SortOrder
-  schemaMarkup?: Prisma.SortOrder
-  relatedSlugs?: Prisma.SortOrder
+  ogTitle?: Prisma.SortOrder
+  ogDescription?: Prisma.SortOrder
+  ogType?: Prisma.SortOrder
+  twitterTitle?: Prisma.SortOrder
+  twitterDescription?: Prisma.SortOrder
+  twitterImage?: Prisma.SortOrder
+  twitterCardType?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -969,10 +1053,15 @@ export type LogoMaxOrderByAggregateInput = {
   metaTitle?: Prisma.SortOrder
   metaDescription?: Prisma.SortOrder
   altText?: Prisma.SortOrder
-  focusKeywords?: Prisma.SortOrder
   canonicalUrl?: Prisma.SortOrder
   ogImageUrl?: Prisma.SortOrder
-  schemaMarkup?: Prisma.SortOrder
+  ogTitle?: Prisma.SortOrder
+  ogDescription?: Prisma.SortOrder
+  ogType?: Prisma.SortOrder
+  twitterTitle?: Prisma.SortOrder
+  twitterDescription?: Prisma.SortOrder
+  twitterImage?: Prisma.SortOrder
+  twitterCardType?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -1005,10 +1094,15 @@ export type LogoMinOrderByAggregateInput = {
   metaTitle?: Prisma.SortOrder
   metaDescription?: Prisma.SortOrder
   altText?: Prisma.SortOrder
-  focusKeywords?: Prisma.SortOrder
   canonicalUrl?: Prisma.SortOrder
   ogImageUrl?: Prisma.SortOrder
-  schemaMarkup?: Prisma.SortOrder
+  ogTitle?: Prisma.SortOrder
+  ogDescription?: Prisma.SortOrder
+  ogType?: Prisma.SortOrder
+  twitterTitle?: Prisma.SortOrder
+  twitterDescription?: Prisma.SortOrder
+  twitterImage?: Prisma.SortOrder
+  twitterCardType?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -1115,11 +1209,15 @@ export type LogoCreateWithoutFavoritedByInput = {
   metaTitle?: string | null
   metaDescription?: string | null
   altText?: string | null
-  focusKeywords?: string | null
   canonicalUrl?: string | null
   ogImageUrl?: string | null
-  schemaMarkup?: string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: string | null
+  ogDescription?: string | null
+  ogType?: string | null
+  twitterTitle?: string | null
+  twitterDescription?: string | null
+  twitterImage?: string | null
+  twitterCardType?: string | null
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -1154,11 +1252,15 @@ export type LogoUncheckedCreateWithoutFavoritedByInput = {
   metaTitle?: string | null
   metaDescription?: string | null
   altText?: string | null
-  focusKeywords?: string | null
   canonicalUrl?: string | null
   ogImageUrl?: string | null
-  schemaMarkup?: string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: string | null
+  ogDescription?: string | null
+  ogType?: string | null
+  twitterTitle?: string | null
+  twitterDescription?: string | null
+  twitterImage?: string | null
+  twitterCardType?: string | null
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -1217,11 +1319,15 @@ export type LogoScalarWhereInput = {
   metaTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
   metaDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   altText?: Prisma.StringNullableFilter<"Logo"> | string | null
-  focusKeywords?: Prisma.StringNullableFilter<"Logo"> | string | null
   canonicalUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
   ogImageUrl?: Prisma.StringNullableFilter<"Logo"> | string | null
-  schemaMarkup?: Prisma.StringNullableFilter<"Logo"> | string | null
-  relatedSlugs?: Prisma.JsonFilter<"Logo">
+  ogTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  ogType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterTitle?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
+  twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -1256,11 +1362,15 @@ export type LogoUpdateWithoutFavoritedByInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1295,11 +1405,15 @@ export type LogoUncheckedUpdateWithoutFavoritedByInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1334,11 +1448,15 @@ export type LogoUncheckedUpdateManyWithoutFavoritedByInput = {
   metaTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   altText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  focusKeywords?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   canonicalUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   ogImageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  schemaMarkup?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  relatedSlugs?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  ogTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ogType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterTitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1404,11 +1522,15 @@ export type LogoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   metaTitle?: boolean
   metaDescription?: boolean
   altText?: boolean
-  focusKeywords?: boolean
   canonicalUrl?: boolean
   ogImageUrl?: boolean
-  schemaMarkup?: boolean
-  relatedSlugs?: boolean
+  ogTitle?: boolean
+  ogDescription?: boolean
+  ogType?: boolean
+  twitterTitle?: boolean
+  twitterDescription?: boolean
+  twitterImage?: boolean
+  twitterCardType?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1445,11 +1567,15 @@ export type LogoSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   metaTitle?: boolean
   metaDescription?: boolean
   altText?: boolean
-  focusKeywords?: boolean
   canonicalUrl?: boolean
   ogImageUrl?: boolean
-  schemaMarkup?: boolean
-  relatedSlugs?: boolean
+  ogTitle?: boolean
+  ogDescription?: boolean
+  ogType?: boolean
+  twitterTitle?: boolean
+  twitterDescription?: boolean
+  twitterImage?: boolean
+  twitterCardType?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1484,11 +1610,15 @@ export type LogoSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   metaTitle?: boolean
   metaDescription?: boolean
   altText?: boolean
-  focusKeywords?: boolean
   canonicalUrl?: boolean
   ogImageUrl?: boolean
-  schemaMarkup?: boolean
-  relatedSlugs?: boolean
+  ogTitle?: boolean
+  ogDescription?: boolean
+  ogType?: boolean
+  twitterTitle?: boolean
+  twitterDescription?: boolean
+  twitterImage?: boolean
+  twitterCardType?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1523,11 +1653,15 @@ export type LogoSelectScalar = {
   metaTitle?: boolean
   metaDescription?: boolean
   altText?: boolean
-  focusKeywords?: boolean
   canonicalUrl?: boolean
   ogImageUrl?: boolean
-  schemaMarkup?: boolean
-  relatedSlugs?: boolean
+  ogTitle?: boolean
+  ogDescription?: boolean
+  ogType?: boolean
+  twitterTitle?: boolean
+  twitterDescription?: boolean
+  twitterImage?: boolean
+  twitterCardType?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1535,7 +1669,7 @@ export type LogoSelectScalar = {
   updatedAt?: boolean
 }
 
-export type LogoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "logoName" | "slug" | "brand" | "website" | "category" | "industry" | "country" | "license" | "description" | "history" | "tags" | "brandColors" | "webpUrl" | "svgUrl" | "pngUrl" | "aiUrl" | "cdrUrl" | "svgfilesize" | "pngfilesize" | "aifilesize" | "cdrfilesize" | "svgContent" | "metaTitle" | "metaDescription" | "altText" | "focusKeywords" | "canonicalUrl" | "ogImageUrl" | "schemaMarkup" | "relatedSlugs" | "publishStatus" | "downloadCount" | "downloadedNumberByPeople" | "createdAt" | "updatedAt", ExtArgs["result"]["logo"]>
+export type LogoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "logoName" | "slug" | "brand" | "website" | "category" | "industry" | "country" | "license" | "description" | "history" | "tags" | "brandColors" | "webpUrl" | "svgUrl" | "pngUrl" | "aiUrl" | "cdrUrl" | "svgfilesize" | "pngfilesize" | "aifilesize" | "cdrfilesize" | "svgContent" | "metaTitle" | "metaDescription" | "altText" | "canonicalUrl" | "ogImageUrl" | "ogTitle" | "ogDescription" | "ogType" | "twitterTitle" | "twitterDescription" | "twitterImage" | "twitterCardType" | "publishStatus" | "downloadCount" | "downloadedNumberByPeople" | "createdAt" | "updatedAt", ExtArgs["result"]["logo"]>
 export type LogoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   favoritedBy?: boolean | Prisma.Logo$favoritedByArgs<ExtArgs>
   _count?: boolean | Prisma.LogoCountOutputTypeDefaultArgs<ExtArgs>
@@ -1575,11 +1709,15 @@ export type $LogoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     metaTitle: string | null
     metaDescription: string | null
     altText: string | null
-    focusKeywords: string | null
     canonicalUrl: string | null
     ogImageUrl: string | null
-    schemaMarkup: string | null
-    relatedSlugs: runtime.JsonValue
+    ogTitle: string | null
+    ogDescription: string | null
+    ogType: string | null
+    twitterTitle: string | null
+    twitterDescription: string | null
+    twitterImage: string | null
+    twitterCardType: string | null
     publishStatus: string
     downloadCount: string
     downloadedNumberByPeople: number
@@ -2035,11 +2173,15 @@ export interface LogoFieldRefs {
   readonly metaTitle: Prisma.FieldRef<"Logo", 'String'>
   readonly metaDescription: Prisma.FieldRef<"Logo", 'String'>
   readonly altText: Prisma.FieldRef<"Logo", 'String'>
-  readonly focusKeywords: Prisma.FieldRef<"Logo", 'String'>
   readonly canonicalUrl: Prisma.FieldRef<"Logo", 'String'>
   readonly ogImageUrl: Prisma.FieldRef<"Logo", 'String'>
-  readonly schemaMarkup: Prisma.FieldRef<"Logo", 'String'>
-  readonly relatedSlugs: Prisma.FieldRef<"Logo", 'Json'>
+  readonly ogTitle: Prisma.FieldRef<"Logo", 'String'>
+  readonly ogDescription: Prisma.FieldRef<"Logo", 'String'>
+  readonly ogType: Prisma.FieldRef<"Logo", 'String'>
+  readonly twitterTitle: Prisma.FieldRef<"Logo", 'String'>
+  readonly twitterDescription: Prisma.FieldRef<"Logo", 'String'>
+  readonly twitterImage: Prisma.FieldRef<"Logo", 'String'>
+  readonly twitterCardType: Prisma.FieldRef<"Logo", 'String'>
   readonly publishStatus: Prisma.FieldRef<"Logo", 'String'>
   readonly downloadCount: Prisma.FieldRef<"Logo", 'String'>
   readonly downloadedNumberByPeople: Prisma.FieldRef<"Logo", 'Int'>

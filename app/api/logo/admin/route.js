@@ -47,7 +47,6 @@ export async function POST(req) {
           metaTitle:                true,
           metaDescription:          true,
           altText:                  true,
-          focusKeywords:            true,
 
           // stats & dates — for table display
           downloadedNumberByPeople: true,

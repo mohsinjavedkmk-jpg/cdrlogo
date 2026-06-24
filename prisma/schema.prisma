@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model Logo {
@@ -54,12 +54,20 @@ model Logo {
   metaTitle       String?
   metaDescription String?
   altText         String?
-  focusKeywords   String?
+
   // ── SEO ADDITIONS (new fields only) ───────────────────────────────────────
-  canonicalUrl    String?   // self-referencing canonical, e.g. https://site.com/logos/{slug}/
-  ogImageUrl      String?   // 1200x630 OG preview image URL (generated separately)
-  schemaMarkup    String?   @db.Text  // full JSON-LD string, server-rendered in <head>
-  relatedSlugs    Json      @default("[]")  // e.g. ["samsung-logo","huawei-logo"] for internal linking
+  canonicalUrl  String? // self-referencing canonical, e.g. https://site.com/logos/{slug}/
+  ogImageUrl    String? // 1200x630 OG preview image URL (generated separately)
+  ogTitle       String?
+  ogDescription String?
+  ogType        String? @default("website")
+
+  twitterTitle       String?
+  twitterDescription String?
+  twitterImage       String?
+  twitterCardType    String? @default("summary_large_image")
+
+
 
   // ── Publishing ─────────────────────────────────────────────────────────────
   publishStatus String @default("Draft")
@@ -79,19 +87,19 @@ model Logo {
 }
 
 model Website {
-  id         String   @id @default(uuid())
-  categories Json?
-  navItems   Json?
-  watermark  Json?
-  Footer     Json?
-  metaTitle       String?
-  metaDescription String?
-  limit           Int @default(20)
+  id               String   @id @default(uuid())
+  categories       Json?
+  navItems         Json?
+  watermark        Json?
+  Footer           Json?
+  metaTitle        String?
+  metaDescription  String?
+  limit            Int      @default(20)
   MaintanceMessage String?
-   tags        Json @default("[]")
-  showmode    Boolean @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  tags             Json     @default("[]")
+  showmode         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model User {
@@ -128,25 +136,25 @@ model User {
 model Page {
   id            String   @id @default(uuid())
   title         String
-   mode          String   @default("editor") 
+  mode          String   @default("editor")
   slug          String   @unique
-  content       String?  // HTML from Tiptap
+  content       String? // HTML from Tiptap
   publishStatus String   @default("draft") // "published" | "draft"
-  InFooter       Boolean @default(false)
-  InLegal        Boolean @default(false)
-  InHome         Boolean @default(false)
+  InFooter      Boolean  @default(false)
+  InLegal       Boolean  @default(false)
+  InHome        Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
 model Log {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // who performed the action (userId, system, api, etc.)
-  who       String
+  who String
 
   // log message / description
-  content   String   @db.Text
+  content String @db.Text
 
   // timestamp
   createdAt DateTime @default(now())
@@ -158,46 +166,45 @@ enum ContactStatus {
 }
 
 model LogoRequest {
-  id             String   @id @default(uuid())
+  id String @id @default(uuid())
 
   // ── Submitted by user ────────────────────────────────────────────────────
-  brandName      String
-  websiteUrl     String?
-  category       String?
+  brandName  String
+  websiteUrl String?
+  category   String?
 
   // Preferred file formats e.g. ["AI","SVG","PNG"]
-  formats        Json     @default("[]")
+  formats Json @default("[]")
 
-  notes          String?  
+  notes          String?
   requesterEmail String?
 
   // ── Admin workflow ────────────────────────────────────────────────────────
   // "pending" | "in_progress" | "completed" | "rejected"
-   status     ContactStatus @default(pending)
-  adminNotes     String? 
+  status     ContactStatus @default(pending)
+  adminNotes String?
 
   // ── Timestamps ────────────────────────────────────────────────────────────
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([status])
   @@index([brandName])
 }
 
-
 model ContactMessage {
-  id      String  @id @default(uuid())
+  id String @id @default(uuid())
 
   // ── From visitor ─────────────────────────────────────────────────────────
   name    String
   email   String
   subject String?
-  message String  
+  message String
 
   // ── Admin workflow ────────────────────────────────────────────────────────
   // "unread" | "read" | "replied" | "archived"
-   status     ContactStatus @default(pending)
-  adminReply  String? 
+  status     ContactStatus @default(pending)
+  adminReply String?
 
   // ── Timestamps ────────────────────────────────────────────────────────────
   createdAt DateTime @default(now())
@@ -207,20 +214,18 @@ model ContactMessage {
   @@index([email])
 }
 
-
-
 model Blog {
-  id          String   @id @default(cuid())
-  image       String   @db.Text
-  title       String
-  slug        String   @unique
-  excerpt     String
-  content     String   @db.Text
-  category    String
-  readTime    Int      @default(5)   // in minutes
-  published   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  image     String   @db.Text
+  title     String
+  slug      String   @unique
+  excerpt   String
+  content   String   @db.Text
+  category  String
+  readTime  Int      @default(5) // in minutes
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Report {
@@ -229,7 +234,7 @@ model Report {
   logoName      String
   reason        String
   reporterEmail String
-  status        String   @default("open")  // open | review | resolved
+  status        String   @default("open") // open | review | resolved
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -242,17 +247,15 @@ enum EmailTemplateStatus {
 }
 
 model EmailTemplate {
-  id          String   @id @default(cuid())
-  key         String   @unique   // machine key e.g. "welcome_email"
-  title       String             // human-readable title
-  description String             // short subtitle shown in list
-  subject     String             // email subject line
-  content     String   
+  id          String              @id @default(cuid())
+  key         String              @unique // machine key e.g. "welcome_email"
+  title       String // human-readable title
+  description String // short subtitle shown in list
+  subject     String // email subject line
+  content     String
   status      EmailTemplateStatus @default(DRAFT)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@map("email_templates")
 }
-
-
