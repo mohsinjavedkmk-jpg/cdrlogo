@@ -83,14 +83,14 @@ async function applyWatermark(buffer, wm) {
 
   let tx, ty;
   switch (position) {
-    case "top-left":      tx = pad;                        ty = pad;                      break;
-    case "top-right":     tx = W - pad - textW;            ty = pad;                      break;
-    case "top-center":    tx = Math.round((W - textW) / 2); ty = pad;                     break;
-    case "bottom-left":   tx = pad;                        ty = H - pad - textH;          break;
-    case "bottom-right":  tx = W - pad - textW;            ty = H - pad - textH;          break;
-    case "bottom-center": tx = Math.round((W - textW) / 2); ty = H - pad - textH;         break;
+    case "top-left": tx = pad; ty = pad; break;
+    case "top-right": tx = W - pad - textW; ty = pad; break;
+    case "top-center": tx = Math.round((W - textW) / 2); ty = pad; break;
+    case "bottom-left": tx = pad; ty = H - pad - textH; break;
+    case "bottom-right": tx = W - pad - textW; ty = H - pad - textH; break;
+    case "bottom-center": tx = Math.round((W - textW) / 2); ty = H - pad - textH; break;
     case "center":
-    default:              tx = Math.round((W - textW) / 2); ty = Math.round((H - textH) / 2); break;
+    default: tx = Math.round((W - textW) / 2); ty = Math.round((H - textH) / 2); break;
   }
 
   tx = Math.max(0, Math.min(tx, W - textW));
@@ -228,6 +228,184 @@ async function callOpenAIWithRetry(params, retries = 1) {
   }
 }
 
+// ── Banned words/phrases — checked in code, not just trusted to the LLM ─────
+// These mirror the prompt's banned-word lists. Server-side enforcement exists
+// because the LLM's own "self validation" step is not reliable — it can and
+// does ship banned phrases despite being told not to.
+let BANNED_PHRASES = [
+  "free download",
+  "free",
+  "download",
+  "get it now",
+  "perfect for",
+  "great for",
+  "ideal for",
+  "best for",
+  "business use",
+  "commercial project",
+  "branding need",
+  "marketing material",
+  "premium quality",
+  "high quality asset",
+  "suitable for project",
+  "useful for creator",
+  "design asset",
+  "creative work",
+  "elevate your brand",
+  "industry leader",
+  "trusted worldwide",
+  "modern branding",
+  "cutting-edge",
+  "cutting edge",
+  "innovative",
+  "stunning",
+  "for your project",
+  "for your brand",
+];
+
+let EDUCATIONAL_PHRASES = [
+  "educational use",
+  "educational reference",
+  "reference use",
+  "research purposes",
+  "research use",
+  "design reference",
+];
+
+function containsBannedPhrase(text) {
+  if (!text) return null;
+  let lower = String(text).toLowerCase();
+  for (let phrase of BANNED_PHRASES) {
+    if (lower.includes(phrase)) return phrase;
+  }
+  return null;
+}
+
+function hasEducationalPhrase(text) {
+  if (!text) return false;
+  let lower = String(text).toLowerCase();
+  return EDUCATIONAL_PHRASES.some(p => lower.includes(p));
+}
+
+// ── Validate a parsed AI response against the hard rules ────────────────────
+// Returns an array of human-readable violation strings (empty = compliant).
+// usedTitles/usedDescriptions are previous pages' exact field values — used
+// to catch verbatim or near-verbatim duplicate titles across versions.
+function validateAIContent(parsed, { usedTitles = [], usedOpeners = [] } = {}) {
+  let violations = [];
+
+  let fieldsToScanForBannedWords = {
+    meta_title: parsed.meta_title,
+    meta_description: parsed.meta_description,
+    main_description: parsed.main_description,
+    alt_text: parsed.alt_text,
+    og_title: parsed.og_title,
+    og_description: parsed.og_description,
+    twitter_title: parsed.twitter_title,
+    twitter_description: parsed.twitter_description,
+    image_object_description: parsed.image_object_description,
+  };
+
+  for (let [field, value] of Object.entries(fieldsToScanForBannedWords)) {
+    let hit = containsBannedPhrase(value);
+    if (hit) violations.push(`${field} contains banned phrase: "${hit}"`);
+  }
+
+  if (Array.isArray(parsed.faq)) {
+    parsed.faq.forEach((qa, i) => {
+      let hit = containsBannedPhrase(qa?.answer);
+      if (hit) violations.push(`faq[${i}].answer contains banned phrase: "${hit}"`);
+    });
+  }
+
+  if (!hasEducationalPhrase(parsed.meta_description)) {
+    violations.push("meta_description missing required educational/reference/research phrase");
+  }
+  if (!hasEducationalPhrase(parsed.main_description)) {
+    violations.push("main_description missing required educational/reference phrase");
+  }
+  if (!hasEducationalPhrase(parsed.og_description)) {
+    violations.push("og_description missing required educational/reference phrase");
+  }
+  if (!hasEducationalPhrase(parsed.twitter_description)) {
+    violations.push("twitter_description missing required educational/reference phrase");
+  }
+
+  // ── Duplicate-title check against prior pages for this same logo/version ─
+  if (parsed.meta_title && usedTitles.some(t => t && t.trim().toLowerCase() === String(parsed.meta_title).trim().toLowerCase())) {
+    violations.push("meta_title is identical to a previous page's meta_title");
+  }
+  if (parsed.main_description) {
+    let opener = String(parsed.main_description).split(/[.!?]/)[0].trim().toLowerCase();
+    if (opener && usedOpeners.some(o => o && o.trim().toLowerCase() === opener)) {
+      violations.push("main_description opening sentence duplicates a previous page's opening sentence");
+    }
+  }
+
+  return violations;
+}
+
+// ── Build BreadcrumbList schema in code (reliable URLs) ──────────────────────
+// Home > Brand > Logo Name
+function buildBreadcrumbSchema({ brand, logoName, canonicalUrl }) {
+  let brandLabel = (brand && brand.trim()) ? brand.trim() : "Logos";
+  let brandSlug = generateSlugFromName(brandLabel);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://cdrlogo.com/",
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": brandLabel,
+        "item": `https://cdrlogo.com/brand/${brandSlug}/`,
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": logoName,
+        "item": canonicalUrl,
+      },
+    ],
+  };
+}
+
+// ── Build ImageObject schema (static parts in code, description from LLM) ───
+function buildImageObjectSchema({ imageUrl, logoName, brand, canonicalUrl, description }) {
+  if (!imageUrl) return {};
+  return {
+    "@context": "https://schema.org",
+    "@type": "ImageObject",
+    "contentUrl": imageUrl,
+    "url": imageUrl,
+    "name": `${logoName} Logo`,
+    "description": description || `${logoName} logo image on cdrlogo.com`,
+    "representativeOfPage": true,
+    ...(brand ? { "creator": { "@type": "Organization", "name": brand } } : {}),
+    "mainEntityOfPage": canonicalUrl,
+  };
+}
+
+// ── Build FAQ schema from LLM-generated Q&A pairs ────────────────────────────
+function buildFaqSchema(faqPairs) {
+  if (!Array.isArray(faqPairs) || !faqPairs.length) return [];
+  return faqPairs.slice(0, 3).map(qa => ({
+    "@type": "Question",
+    "name": qa.question || qa.q || "",
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": qa.answer || qa.a || "",
+    },
+  }));
+}
+
 // ── OpenAI: generate SEO content + tags + full OG/Twitter fields ─────────────
 async function generateAIContent({
   logoName, brand, website, category, industry, country, relatedLogos, canonicalUrl,
@@ -236,154 +414,786 @@ async function generateAIContent({
 
   let relatedContext = isVariant
     ? relatedLogos
-        .slice(0, 5)
-        .map(
-          (r, i) =>
-            `Previous version ${i + 1}:\n- Name: ${r.logoName}\n- Meta Title: ${r.metaTitle || "N/A"}\n- Meta Description: ${r.metaDescription || "N/A"}\n- Description: ${r.description || "N/A"}\n- Tags: ${Array.isArray(r.tags) ? r.tags.join(", ") : "N/A"}`
-        )
-        .join("\n\n")
+      .slice(0, 5)
+      .map(
+        (r, i) =>
+          `Previous version ${i + 1}:\n- Name: ${r.logoName}\n- Meta Title: ${r.metaTitle || "N/A"}\n- Meta Description: ${r.metaDescription || "N/A"}\n- Description: ${r.description || "N/A"}\n- Tags: ${Array.isArray(r.tags) ? r.tags.join(", ") : "N/A"}`
+      )
+      .join("\n\n")
     : "";
 
   let usedOpeners = isVariant
     ? relatedLogos
-        .map(r => (r.description || "").split(/[.!?]/)[0].trim())
-        .filter(Boolean)
+      .map(r => (r.description || "").split(/[.!?]/)[0].trim())
+      .filter(Boolean)
     : [];
 
   // Brand, website, industry: LLM always decides from logo name.
   // Form-submitted values are hints only — passed as context, not forced.
-  let providedBrand    = (brand    && brand.trim())    ? brand.trim()    : "";
-  let providedWebsite  = (website  && website.trim())  ? website.trim()  : "";
+  let providedBrand = (brand && brand.trim()) ? brand.trim() : "";
+  let providedWebsite = (website && website.trim()) ? website.trim() : "";
   let providedIndustry = (industry && industry.trim()) ? industry.trim() : "";
-  let resolvedCountry  = (country  && country.trim())  ? country.trim()  : "";
+  let resolvedCountry = (country && country.trim()) ? country.trim() : "";
 
-  // ── System prompt ─────────────────────────────────────────────────────────
-  let systemPrompt = `You are a senior SEO specialist for a professional logo download website (cdrlogo.com). Your job is to write SEO content that ranks for queries like "Nike logo PNG download", "Apple logo SVG vector free", "brand logo transparent background".
+  // ── SYSTEM PROMPT ─────────────────────────────────────────────
 
-BRAND/WEBSITE/INDUSTRY RULES (non-negotiable):
-1. You MUST always identify the real-world brand from the logo name — never invent a placeholder.
-2. You MUST always determine the brand's real official website URL from your own knowledge (e.g. https://www.nike.com).
-3. You MUST always identify the brand's real industry/sector with specificity (e.g. "Sportswear & Athletic Apparel", not "Retail").
-4. If, after genuine effort, you truly cannot identify ANY real brand, use: brand="cdrlogo.com", website="https://cdrlogo.com", industry="Logo Design & Graphics".
-5. Never leave brand, website, or industry empty. Never use vague placeholders.
+  let systemPrompt = `You are a senior SEO specialist generating metadata for cdrlogo.com, a professional logo reference archive website.
 
-You always return valid JSON only — no markdown, no code fences, no commentary.`;
+Your purpose is to generate SEO content for logo pages while following STRICT compliance rules.
 
-  // ── User prompt ───────────────────────────────────────────────────────────
-  let userPrompt = `Generate complete SEO content for this logo page on cdrlogo.com.
+==================================================
+CORE WEBSITE IDENTITY
+==================================================
 
-== LOGO DETAILS ==
+cdrlogo.com is NOT a marketplace.
+
+cdrlogo.com is:
+
+- educational archive
+- logo reference library
+- research resource
+- vector/logo repository
+
+Tone must ALWAYS feel like:
+
+- archive
+- educational
+- informational
+- reference resource
+
+NEVER sound like:
+
+- ecommerce website
+- commercial product page
+- marketing landing page
+- advertisement
+
+==================================================
+BRAND IDENTIFICATION RULES
+==================================================
+
+1. Identify the real-world brand from logo name when confidence is HIGH.
+
+2. Identify official website ONLY if highly confident.
+
+3. Identify real specific industry.
+
+4. Identify country of brand origin.
+
+5. If confidence is LOW (<90%):
+
+brand = "cdrlogo.com"
+website = ""
+industry = "Logo Design & Graphics"
+country = "Worldwide"
+
+6. NEVER invent fake companies.
+
+==================================================
+GLOBAL ABSOLUTE BANNED WORDS
+(ZERO EXCEPTIONS)
+==================================================
+
+Never use ANYWHERE in ANY field:
+
+Free
+Download
+Free Download
+Perfect for
+Great for
+Ideal for
+Best for
+Business use
+Commercial projects
+Branding needs
+Creative and branding needs
+Marketing materials
+Premium quality
+High quality asset
+Suitable for projects
+Useful for creators
+Design assets
+Creative work
+Elevate your brand
+Industry leader
+Trusted worldwide
+Modern branding
+Cutting-edge
+Innovative
+Stunning
+
+==================================================
+PRIORITY ORDER
+==================================================
+
+Priority 1:
+Never violate banned words.
+
+Priority 2:
+Maintain educational/reference tone.
+
+Priority 3:
+Avoid marketing/commercial language.
+
+Priority 4:
+SEO optimization comes AFTER tone.
+
+If conflict happens:
+FOLLOW PRIORITY ORDER.
+
+==================================================
+CRITICAL SELF VALIDATION
+==================================================
+
+Before returning output:
+
+Check ALL fields.
+
+If ANY banned word exists:
+
+REGENERATE internally.
+
+Never return invalid output.
+
+Return ONLY VALID JSON.
+
+No markdown.
+No explanations.
+No commentary.`;
+
+
+  ///////////////////////////////////////////////////////////////
+  // USER PROMPT
+  ///////////////////////////////////////////////////////////////
+
+  let userPrompt = `Generate complete SEO metadata for this logo page.
+
+==================================================
+LOGO DETAILS
+==================================================
+
 Logo Name : ${logoName}
-${providedBrand    ? `Brand     : ${providedBrand} (use if correct, but verify from your own knowledge)`    : `Brand     : UNKNOWN — infer the real brand from the logo name. Only fall back to "cdrlogo.com" if truly unidentifiable.`}
-${providedWebsite  ? `Website   : ${providedWebsite} (use if correct, verify from your own knowledge)`      : `Website   : UNKNOWN — determine the brand's real official URL from your knowledge.`}
-Category  : ${category || "Logo"}
-${providedIndustry ? `Industry  : ${providedIndustry} (use if correct, be specific)`                        : `Industry  : UNKNOWN — determine from what the brand actually does. Be specific.`}
-${resolvedCountry  ? `Country   : ${resolvedCountry}` : ""}
+
+${providedBrand
+      ? `Brand : ${providedBrand} (verify independently)`
+      : `Brand : UNKNOWN — infer real brand if confidently identifiable`
+    }
+
+${providedWebsite
+      ? `Website : ${providedWebsite} (verify independently)`
+      : `Website : UNKNOWN`
+    }
+
+Category : ${category || "Logo"}
+
+${providedIndustry
+      ? `Industry : ${providedIndustry} (verify independently)`
+      : `Industry : UNKNOWN`
+    }
+
+${resolvedCountry ? `Country : ${resolvedCountry}` : ""}
+
 Canonical URL : ${canonicalUrl}
 
-== FIELD RULES ==
-
-meta_title (50-60 chars HARD LIMIT — NEVER exceed 60):
-  • Format: "{Brand} Logo PNG SVG Vector Free Download | cdrlogo.com"
-  • Include brand name + at least TWO of: PNG, SVG, Vector, Download, Free
-  • End with "| cdrlogo.com"
-  • NEVER empty
-
-meta_description (140-155 chars HARD LIMIT):
-  • Download CTA, NOT a blog intro
-  • Contain: brand/logo name + at least 3 of: free download, PNG, SVG, vector, transparent, high quality, AI, EPS
-  • Structure: "Download [Brand] logo in [formats]. [one benefit sentence]. Available at cdrlogo.com."
-  • NEVER use: "In this article", "We explore", "This post", "Learn about"
-  • NEVER empty
-
-main_description (120-155 words):
-  • Informative blog-style paragraph about the brand/logo
-  • Opening sentence MUST mention downloading + at least one format (PNG/SVG/vector)
-  • Cover: what logo is, what brand represents, industry/sector, brief brand context, download formats (PNG, SVG, AI, EPS, CDR), use cases
-  • Include naturally: "free download", "vector format", "transparent background", "high resolution"
-  • Do NOT describe colors/shapes/visual design — only brand context + download utility
-  • NEVER empty
-
-alt_text (10-15 words):
-  • Format: "{Brand} logo in PNG SVG vector format — free download on cdrlogo.com"
-  • NEVER empty
-
-history (40-60 words):
-  • Short brand founding/milestone paragraph tying the logo to their timeline
-  • If brand unknown: "Download the ${logoName} logo from cdrlogo.com. Available in PNG, SVG, AI, EPS and CDR vector formats for commercial and personal use."
-  • NEVER empty
-
-tags (12-15 items, array of strings):
-  • Must include: brand/logo name, "PNG", "SVG", "vector", "free download", "transparent", industry term, "logo download", "cdrlogo.com"
-  • Add: "AI file", "EPS", "CDR" where relevant
-  • NEVER empty array
-
-og_title (50-60 chars):
-  • Open Graph title for social sharing
-  • Format: "{Brand} Logo — Free PNG & SVG Vector Download"
-  • Slightly more social/click-friendly than meta_title — drop "| cdrlogo.com" suffix
-  • Must still include brand name + download intent
-  • NEVER empty
-
-og_description (120-160 chars):
-  • Open Graph description for social previews (Facebook, LinkedIn, WhatsApp)
-  • Enticing one-liner: what the logo is + download CTA + key formats
-  • More conversational than meta_description — written for humans scrolling social feeds
-  • Must mention at least 2 formats (PNG, SVG, vector, AI, CDR)
-  • NEVER empty
-
-twitter_title (50-60 chars):
-  • Twitter/X card title
-  • Can mirror og_title but optimised for Twitter's narrower card display
-  • Must include brand name + at least one format keyword
-  • NEVER empty
-
-twitter_description (100-140 chars):
-  • Twitter/X card description — punchy, action-oriented
-  • Mention brand + "download" + at least one format
-  • NEVER empty
-
-brand_used    : The exact brand name you decided to use (string)
-website_used  : The brand's real official website URL with https:// (string)
-industry_used : The brand's real specific industry/sector (string)
 ${isVariant ? `
-== VARIANT / VERSION RULES ==
-This is a new version of an existing logo. Previous version(s) already indexed:
+==================================================
+VARIANT / UNIQUENESS REQUIREMENT
+==================================================
+
+This logo name matches ${relatedLogos.length} existing page(s) on the site
+(same brand, same base name, or an earlier version/upload of the same logo).
+
+PREVIOUS PAGES (for reference — DO NOT COPY):
 
 ${relatedContext}
 
-Previously used description openers (DO NOT reuse any): ${usedOpeners.length ? usedOpeners.map(o => `"${o}"`).join(", ") : "none"}
+PREVIOUSLY USED OPENING SENTENCES (banned — do not reuse or closely
+paraphrase any of these as the first sentence of main_description):
 
-Mandatory uniqueness:
-1. Open main_description from a different angle (rebrand trigger, new market context, identity evolution) — still mention download + format in sentence 1.
-2. Do not mirror sentence structure of prior versions.
-3. Do not reuse phrases from prior meta_title, meta_description, og_title, og_description, twitter_title, twitter_description.
-4. Tags: keep core brand/format terms, add 3-4 new tags (version identifier, specific use-case terms).` : ""}
+${usedOpeners.map(o => `- "${o}"`).join("\n")}
 
-Respond ONLY with valid JSON — no markdown, no code fences:
+MANDATORY RULES FOR THIS VARIANT:
+
+1. meta_title MUST be textually different from every previous Meta Title
+   listed above — not just reordered words. Use a different descriptive
+   angle (e.g. reference a distinguishing visual trait, color, or file
+   variant if known) instead of the generic "{Brand} Logo PNG SVG Vector"
+   pattern if that exact phrase was already used.
+2. meta_description MUST use different sentence structure and different
+   educational/reference phrasing than every previous Meta Description above.
+3. main_description's first sentence MUST open differently from every
+   sentence listed under PREVIOUSLY USED OPENING SENTENCES.
+4. og_title, og_description, twitter_title, twitter_description must each
+   differ in wording from the corresponding previous fields above.
+5. tags: keep core brand/format tags but vary the 4 context-specific tags.
+6. If you cannot find a distinguishing real-world detail, vary the sentence
+   structure and word order rather than reusing the same template — never
+   submit a title or description identical or near-identical to one above.
+` : ""}
+
+==================================================
+FIELD RULES
+==================================================
+
+
+--------------------------------------------------
+meta_title
+(50–60 chars HARD LIMIT)
+--------------------------------------------------
+
+Format:
+
+"{Logo Name} Logo PNG SVG Vector | cdrlogo.com"
+
+MANDATORY RULES:
+
+1. Use the EXACT FULL Logo Name as given (e.g. "Apple Clip Blue Logo PNG SVG
+   Vector | cdrlogo.com") — NOT the brand name alone. Every distinguishing
+   word in the logo name (color, style, variant, version) MUST appear.
+
+2. This title MUST be textually different from every meta_title listed in
+   PREVIOUS PAGES above — not just reordered words. Use a different
+   descriptive angle or include a distinguishing trait from the logo name
+   that the previous title did not use.
+
+3. Must include minimum TWO of: PNG, SVG, Vector.
+
+4. If the generated title would be identical or near-identical to a previous
+   page's meta_title, add a distinguishing qualifier (color, file variant,
+   edition) rather than reusing the same template.
+
+STRICTLY FORBIDDEN:
+
+Free
+Download
+Free Download
+
+If too long: abbreviate automatically.
+
+INVALID if forbidden words appear.
+INVALID if title duplicates a previous page's meta_title.
+
+--------------------------------------------------
+meta_description
+(140–155 chars HARD LIMIT)
+--------------------------------------------------
+
+MANDATORY REQUIREMENTS:
+
+Must contain brand name.
+
+Must contain minimum 3:
+
+PNG
+SVG
+Vector
+AI
+Must contain AT LEAST ONE EXACT PHRASE:
+
+educational use
+
+OR
+
+reference use
+
+OR
+
+research purposes
+
+Allowed patterns (vary naturally):
+
+Pattern A:
+
+"[Brand] logo available in PNG, SVG, and vector format for educational use and research purposes. Reference archive on cdrlogo.com."
+
+Pattern B:
+
+"Access [Brand] logo files in PNG, SVG, and vector format for educational reference and logo research on cdrlogo.com."
+
+Pattern C:
+
+"Explore [Brand] logo resources in PNG, SVG, and vector format for research purposes at cdrlogo.com."
+
+INVALID if educational/reference wording missing.
+
+
+--------------------------------------------------
+main_description
+(120–155 words)
+--------------------------------------------------
+
+Sentence 1 MUST mention:
+
+PNG OR SVG OR Vector.
+
+Must naturally include ALL:
+
+vector format
+high resolution
+
+Must contain:
+
+educational use
+
+OR
+
+reference use
+
+Content should cover:
+
+- what brand represents
+- company background
+- industry
+- available formats:
+  PNG
+  SVG
+  AI
+  CDR
+
+STRICTLY FORBIDDEN:
+
+Free
+Download
+Marketing language
+Commercial wording
+Promotional wording
+
+DO NOT describe:
+
+colors
+visual style
+logo design elements
+
+
+--------------------------------------------------
+alt_text
+(LOCKED FORMAT)
+--------------------------------------------------
+
+Return EXACTLY this:
+
+"{Brand} logo — PNG SVG vector file on cdrlogo.com"
+
+Rules:
+
+DO NOT CHANGE FORMAT.
+
+DO NOT ADD WORDS.
+
+STRICTLY FORBIDDEN:
+
+Free
+Download
+CTA language
+SEO wording
+Get it now"
+
+INVALID if modified.
+
+--------------------------------------------------
+tags
+(12–15 array items)
+--------------------------------------------------
+
+Must include:
+
+brand name
+logo
+PNG
+SVG
+vector
+cdrlogo.com
+
+Use:
+
+8 fixed SEO tags
+
+PLUS
+
+4 context-specific tags based on industry.
+
+Example:
+
+Nike:
+
+sportswear logo
+athletic apparel
+shoe brand
+
+Tesla:
+
+electric vehicle logo
+automotive company
+EV brand
+
+Avoid identical tag arrays across pages.
+
+
+--------------------------------------------------
+og_title
+(50–60 chars)
+--------------------------------------------------
+
+Format:
+
+"{Logo Name} Logo — PNG & SVG Vector"
+
+MANDATORY RULES:
+
+1. Use the EXACT FULL Logo Name as given (e.g. "Apple Clip Blue"), NOT the
+   brand name alone (e.g. NOT "Apple Logo — PNG & SVG Vector"). Every
+   distinguishing word (color, style, version) MUST appear.
+
+2. Must be textually different from every og_title of previous pages above.
+
+3. Social friendly. No cdrlogo.com suffix.
+
+STRICTLY FORBIDDEN anywhere in this field:
+
+Free
+Download
+Perfect for
+For your projects
+For your brand
+For digital and print projects
+Ideal for
+Great for
+Cutting-edge
+Innovative
+Stunning
+Any marketing or commercial wording
+
+INVALID if full logo name is not used.
+INVALID if a previous page's og_title is duplicated.
+
+--------------------------------------------------
+og_description
+(120–160 chars)
+--------------------------------------------------
+
+MANDATORY RULES:
+
+1. Must sound like a DIGITAL ARCHIVE — NEVER an advertisement or product page.
+
+2. Must contain the brand name.
+
+3. Must contain minimum 2 of: PNG, SVG, Vector, AI, CDR.
+
+4. Must contain AT LEAST ONE EXACT PHRASE:
+   "educational reference"
+   OR "research purposes"
+   OR "reference use"
+
+5. Must NOT contain any banned phrase from the global list.
+
+Approved patterns (vary wording naturally):
+
+Pattern A:
+"[Brand] logo available in PNG, SVG and vector format for educational
+reference and research purposes at cdrlogo.com."
+
+Pattern B:
+"Access the [Logo Name] logo in PNG and SVG vector format — educational
+reference archive at cdrlogo.com."
+
+Pattern C:
+"Explore [Logo Name] logo files in SVG vector and PNG format for design
+research and educational reference at cdrlogo.com."
+
+STRICTLY FORBIDDEN anywhere in this field:
+
+Perfect for
+For your projects
+For your brand
+For digital and print projects
+Creative and branding needs
+Commercial projects
+Business use
+Marketing materials
+Elevate your brand
+Cutting-edge
+Innovative
+Stunning
+Any marketing, commercial or promotional wording
+
+INVALID if educational/reference phrase is missing.
+INVALID if commercial tone appears.
+INVALID if banned phrase appears.
+
+--------------------------------------------------
+twitter_title
+(50–60 chars)
+--------------------------------------------------
+
+Rules:
+
+Brand mandatory.
+
+At least one:
+
+PNG
+SVG
+Vector
+
+STRICTLY FORBIDDEN:
+
+Free
+Download
+
+
+---------------------------------------------------
+twitter_description
+(100–140 chars)
+--------------------------------------------------
+
+MANDATORY RULES:
+
+1. Must contain the brand name.
+
+2. Must contain minimum 2 of: PNG, SVG, Vector
+
+3. Must contain AT LEAST ONE EXACT PHRASE:
+   "educational reference"
+   OR "research use"
+   OR "reference use"
+
+4. Must NOT contain any banned phrase from the global list.
+
+Approved patterns (vary wording naturally):
+
+Pattern A:
+"[Brand] logo in PNG  and SVG vector format for educational
+reference and research use."
+
+Pattern B:
+"[Logo Name] logo — SVG vector and PNG format for educational reference
+at cdrlogo.com."
+
+Pattern C:
+"Explore [Logo Name] in SVG vector and PNG for educational
+archive reference."
+
+ABSOLUTELY FORBIDDEN anywhere in this field:
+
+Perfect for
+For your projects
+For digital and print projects
+For your brand
+Great for
+Ideal for
+Best for
+Get it now
+Free Download
+Useful for creators
+Suitable for projects
+Creative work
+Branding use
+Design work
+Business use
+Marketing use
+Commercial projects
+Cutting-edge
+Innovative
+Stunning
+
+INVALID if educational/reference phrase is missing.
+INVALID if any banned phrase appears.
+
+
+--------------------------------------------------
+image_object_description
+(15–25 words)
+--------------------------------------------------
+
+Short, literal description of the image file itself
+(what schema.org/ImageObject "description" should say).
+
+Must mention:
+
+Brand name
+At least one of: logo / image / file
+
+STRICTLY FORBIDDEN:
+
+Free
+Download
+Marketing language
+
+
+--------------------------------------------------
+faq
+(EXACTLY 3 Q&A PAIRS)
+--------------------------------------------------
+
+Generate exactly 3 question/answer pairs about
+format / download / usage only.
+
+Allowed question topics ONLY:
+
+- What formats is this logo available in?
+- Can I use this logo for educational purposes?
+- Is this logo available in SVG format?
+
+Answers must:
+
+- be factual, 1–2 sentences
+- reference only formats relevant to this logo
+- maintain educational/reference tone
+- NEVER use: Free, Download, commercial wording
+
+Return as array of objects:
+
+[
+  { "question": "...", "answer": "..." },
+  { "question": "...", "answer": "..." },
+  { "question": "...", "answer": "..." }
+]
+
+
+--------------------------------------------------
+FINAL OUTPUT FIELDS
+--------------------------------------------------
+
+brand_used
+website_used
+industry_used
+country_used
+
+
+==================================================
+FINAL SELF VALIDATION
+==================================================
+
+BEFORE RETURNING:
+
+Scan ALL generated fields.
+
+If ANY field contains ANY banned word:
+
+Free
+Download
+Perfect for
+Branding needs
+Commercial projects
+Creative work
+Business use
+Marketing use
+
+OR
+
+meta_description missing:
+
+educational use
+reference use
+research purposes
+
+OR
+
+og_description sounds commercial
+
+OR
+
+alt_text format changed
+
+OR
+
+twitter_description contains filler language
+
+OR
+
+faq has more or fewer than 3 items
+
+OR
+
+faq covers topics outside format/download/usage
+
+THEN:
+
+DO NOT RETURN.
+
+REGENERATE internally.
+
+
+GOOGLE SAFETY RULES
+==================================================
+
+* Every page must help users — not just rank.
+* No scaled-content abuse patterns.
+* No thin or duplicate content.
+* Vary description structure across pages.
+* Accuracy over verbosity — keep it concise.
+==============================================
+FINAL ZERO TOLERANCE VALIDATION
+
+Reject output instantly if ANY field contains:
+
+free download
+get it now
+access
+explore
+discover
+grab
+perfect for
+ideal for
+great for
+best for
+for your projects
+branding needs
+creative needs
+marketing use
+commercial use
+business use
+professional use
+
+Descriptions MUST sound like:
+
+digital archive
+reference library
+educational catalog
+logo archive
+
+Descriptions MUST NOT sound like:
+
+product advertisement
+commercial promotion
+marketing copy
+
+If violation found → regenerate before returning JSON.
+==================================================
+RETURN JSON ONLY
+==================================================
+
 {
   "meta_title": "...",
   "meta_description": "...",
   "main_description": "...",
   "alt_text": "...",
-  "history": "...",
-  "tags": ["...", "...", "..."],
+  "tags": ["...", "..."],
   "og_title": "...",
   "og_description": "...",
   "twitter_title": "...",
   "twitter_description": "...",
+  "image_object_description": "...",
+  "faq": [
+    { "question": "...", "answer": "..." },
+    { "question": "...", "answer": "..." },
+    { "question": "...", "answer": "..." }
+  ],
   "brand_used": "...",
   "website_used": "...",
-  "industry_used": "..."
+  "industry_used": "...",
+  "country_used": "..."
 }`;
+
+  let messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ];
 
   let completion = await callOpenAIWithRetry({
     model: "gpt-4.1-mini",
     temperature: 0.6,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user",   content: userPrompt   },
-    ],
+    messages,
     response_format: { type: "json_object" },
   });
 
@@ -391,33 +1201,87 @@ Respond ONLY with valid JSON — no markdown, no code fences:
   let parsed;
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 
+  // ── Server-side compliance check — do not trust the LLM's self-validation ─
+  // Previous titles/openers (for duplicate detection across versions) come
+  // from the same relatedLogos data already passed in for variant context.
+  let usedTitles = relatedLogos.map(r => r.metaTitle).filter(Boolean);
+  let violations = validateAIContent(parsed, { usedTitles, usedOpeners });
+
+  if (violations.length) {
+    console.warn(`[AI Validation] ${violations.length} violation(s) found, re-calling OpenAI once:`);
+    violations.forEach(v => console.warn(`     - ${v}`));
+
+    let correctionPrompt = `Your previous JSON response violated these rules:
+
+${violations.map(v => `- ${v}`).join("\n")}
+
+Regenerate the COMPLETE JSON response, fixing every violation above. Do not
+repeat the same mistakes. Re-check every field against the banned-words list
+and the educational/reference phrase requirement before returning. Return
+ONLY the corrected JSON object, with the same structure as before.`;
+
+    let retryCompletion = await callOpenAIWithRetry({
+      model: "gpt-4.1-mini",
+      temperature: 0.5,
+      messages: [
+        ...messages,
+        { role: "assistant", content: raw },
+        { role: "user", content: correctionPrompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+
+    let retryRaw = retryCompletion.choices[0]?.message?.content || "{}";
+    let retryParsed;
+    try { retryParsed = JSON.parse(retryRaw); } catch { retryParsed = null; }
+
+    if (retryParsed) {
+      let retryViolations = validateAIContent(retryParsed, { usedTitles, usedOpeners });
+      console.log(`[AI Validation] Retry result: ${retryViolations.length ? `${retryViolations.length} violation(s) remain` : "clean"}`);
+      // Per spec: call the LLM again no more than once. Whatever comes back
+      // from this single retry is accepted as final — we don't loop further.
+      parsed = retryParsed;
+    } else {
+      console.warn("[AI Validation] Retry response failed to parse — keeping original response");
+    }
+  } else {
+    console.log("[AI Validation] ✓ No violations found on first attempt");
+  }
+
   // ── Defensive fallbacks — LLM rules but we never ship empty strings ───────
-  let resolvedBrand    = (parsed.brand_used    && String(parsed.brand_used).trim())    || providedBrand    || "cdrlogo.com";
-  let resolvedWebsite  = (parsed.website_used  && String(parsed.website_used).trim())  || providedWebsite  || "https://cdrlogo.com";
+  // NOTE: these fallback strings only fire if the LLM call/parse fails
+  // entirely (e.g. JSON.parse threw and parsed === {}). They must themselves
+  // be banned-word-free, since they can end up shipped as-is.
+  let resolvedBrand = (parsed.brand_used && String(parsed.brand_used).trim()) || providedBrand || "cdrlogo.com";
+  let resolvedWebsite = (parsed.website_used && String(parsed.website_used).trim()) || providedWebsite || "https://cdrlogo.com";
   let resolvedIndustry = (parsed.industry_used && String(parsed.industry_used).trim()) || providedIndustry || "Logo Design & Graphics";
 
   return {
-    brandUsed:    resolvedBrand,
-    websiteUsed:  resolvedWebsite,
+    brandUsed: resolvedBrand,
+    websiteUsed: resolvedWebsite,
     industryUsed: resolvedIndustry,
 
-    metaTitle:       parsed.meta_title       || `${logoName} Logo PNG SVG Vector Free Download | cdrlogo.com`,
-    metaDescription: parsed.meta_description || `Download ${logoName} logo in PNG, SVG and vector formats for free. Transparent background, high resolution. Available at cdrlogo.com.`,
-    description:     parsed.main_description || `Download the ${logoName} logo from cdrlogo.com in PNG, SVG, AI, EPS and CDR vector formats. Suitable for websites, presentations, print and apps. High resolution, transparent background available for free.`,
-    altText:         parsed.alt_text         || `${logoName} logo PNG SVG vector format free download cdrlogo.com`,
-    history:         parsed.history          || `Download the ${logoName} logo from cdrlogo.com. Available in PNG, SVG, AI, EPS and CDR vector formats for commercial and personal use.`,
+    metaTitle: parsed.meta_title || `${logoName} Logo PNG SVG Vector | cdrlogo.com`,
+    metaDescription: parsed.meta_description || `${logoName} logo available in PNG, SVG and vector format for educational use and research purposes. Reference archive on cdrlogo.com.`,
+    description: parsed.main_description || `The ${logoName} logo is available in PNG, SVG, AI and CDR vector formats with  high resolution, provided on cdrlogo.com for educational use and reference purposes.`,
+    altText: parsed.alt_text || `${logoName} logo — PNG SVG vector file on cdrlogo.com`,
     tags: Array.isArray(parsed.tags) && parsed.tags.length
       ? parsed.tags
-      : [logoName, "logo", "PNG", "SVG", "vector", "free download", "transparent", "cdrlogo.com"],
+      : [logoName, "logo", "PNG", "SVG", "vector",  "cdrlogo.com"],
 
     // ── New OG / Twitter fields ─────────────────────────────────────────────
-    ogTitle:           parsed.og_title           || `${logoName} Logo — Free PNG & SVG Vector Download`,
-    ogDescription:     parsed.og_description     || `Download the ${logoName} logo in PNG, SVG and vector formats for free. Transparent background, high resolution available at cdrlogo.com.`,
-    twitterTitle:      parsed.twitter_title      || `${logoName} Logo PNG SVG Vector — Free Download`,
-    twitterDescription:parsed.twitter_description|| `Download the ${logoName} logo for free — PNG, SVG, AI, CDR vector formats. Transparent & high resolution.`,
+
+    ogTitle: parsed.og_title || `${logoName} Logo — PNG & SVG Vector`,
+    ogDescription: parsed.og_description || `${logoName} logo available in PNG and SVG vector format for educational reference and research purposes.`,
+    twitterTitle: parsed.twitter_title || `${logoName} Logo — PNG SVG Vector`,
+    twitterDescription: parsed.twitter_description || `${logoName} logo in PNG and SVG vector format for educational reference and research use.`,
+
+    // ── Schema source fields (raw from LLM, structured into JSON-LD later) ──
+    imageObjectDescription: parsed.image_object_description || `${logoName} logo image on cdrlogo.com`,
+    faq: Array.isArray(parsed.faq) ? parsed.faq : [],
 
     isVariant,
-    relatedSlugs: relatedLogos.map(r => r.slug).filter(Boolean),
+    relatedSlugs: [],
   };
 }
 
@@ -431,22 +1295,22 @@ export async function POST(req) {
     console.log("[1] ✓ Form data received");
 
     // ── 1. pull fields ────────────────────────────────────────────────────────
-    let slug          = formData.get("slug")?.trim();
-    let logoName      = formData.get("logoName")?.trim();
-    let brand         = formData.get("brand")        || "";
-    let website       = formData.get("website")      || "";
-    let category      = formData.get("category")     || "";
-    let industry      = formData.get("industry")     || "";
-    let country       = formData.get("country")      || "";
-    let license       = formData.get("license")      || "";
-    let publishStatus = formData.get("publishStatus")|| "Draft";
-    let downloadCount = formData.get("downloadCount")|| "unlimited";
-    let altText       = formData.get("altText")      || "";
+    let slug = formData.get("slug")?.trim();
+    let logoName = formData.get("logoName")?.trim();
+    let brand = formData.get("brand") || "";
+    let website = formData.get("website") || "";
+    let category = formData.get("category") || "";
+    let industry = formData.get("industry") || "";
+    let country = formData.get("country") || "";
+    let license = formData.get("license") || "";
+    let publishStatus = formData.get("publishStatus") || "Draft";
+    let downloadCount = formData.get("downloadCount") || "unlimited";
+    let altText = formData.get("altText") || "";
 
-    let description     = formData.get("description")     || "";
-    let metaTitle       = formData.get("metaTitle")       || "";
+    let description = formData.get("description") || "";
+    let metaTitle = formData.get("metaTitle") || "";
     let metaDescription = formData.get("metaDescription") || "";
-    let history         = formData.get("history")         || "";
+
 
     let brandColors = [];
     try { brandColors = JSON.parse(formData.get("brandColors") || "[]"); } catch { }
@@ -486,23 +1350,30 @@ export async function POST(req) {
     console.log(`[3] ✓ Watermark config: ${watermark?.enabled ? "ENABLED" : "DISABLED"}`);
 
     // ── 4. AI content generation ──────────────────────────────────────────────
-    let tags       = [];
-    let aiMeta     = { isVariant: false };
+    let tags = [];
+    let aiMeta = { isVariant: false };
     let finalLogoName = logoName;
-    let finalSlug     = slug;
-    let relatedSlugs  = [];
+    let finalSlug = slug;
+    let relatedSlugs = [];
 
     // canonicalUrl is always cdrlogo.com/logos/{slug}/ — rebuilt after
     // potential auto-versioning settles the final slug.
-    let canonicalUrl = `https://cdrlogo.com/logos/${slug}/`;
+    let canonicalUrl = `https://cdrlogo.com/logo/${slug}/`;
 
     // ── New SEO vars with safe defaults (overwritten by AI below) ────────────
-    let ogTitle            = "";
-    let ogDescription      = "";
-    let ogImageUrl         = "";          // set after WebP upload in step 6
-    let twitterTitle       = "";
+    let ogTitle = "";
+    let ogDescription = "";
+    let ogImageUrl = "";          // set after WebP upload in step 6
+    let twitterTitle = "";
     let twitterDescription = "";
-    let twitterCardType    = "summary_large_image";
+    let twitterCardType = "summary_large_image";
+
+    // ── Schema fields (NEW) ───────────────────────────────────────────────────
+    let imageObjectSchema = {};
+    let breadcrumbSchema = {};
+    let faqSchema = [];
+    let imageObjectDescription = "";
+    let faqPairs = [];
 
     if (useAI) {
       console.log("[4] AI GENERATION ENABLED - Starting process...");
@@ -517,7 +1388,7 @@ export async function POST(req) {
             console.log(`     ${i + 1}. "${m.logoName}"`);
           });
           finalLogoName = generateVersionedName(logoName, exactNormalizedMatches);
-          finalSlug     = generateSlugFromName(finalLogoName);
+          finalSlug = generateSlugFromName(finalLogoName);
           console.log(`[4b] ✓ Logo name: "${logoName}" → "${finalLogoName}"`);
           console.log(`[4b] ✓ Slug: "${slug}" → "${finalSlug}"`);
 
@@ -530,7 +1401,7 @@ export async function POST(req) {
             );
           }
           // Rebuild canonicalUrl after versioned slug is finalised
-          canonicalUrl = `https://cdrlogo.com/logos/${finalSlug}/`;
+          canonicalUrl = `https://cdrlogo.com/logo/${finalSlug}/`;
         } else {
           console.log(`[4b] No exact matches — this is a new logo, no versioning needed`);
         }
@@ -554,37 +1425,40 @@ export async function POST(req) {
         console.log(`     - og_title: "${aiContent.ogTitle}"`);
         console.log(`     - twitter_title: "${aiContent.twitterTitle}"`);
         console.log(`     - tags: ${aiContent.tags.length} generated`);
-        console.log(`     - history: ${aiContent.history ? "✓" : "empty"}`);
+        console.log(`     - faq pairs: ${aiContent.faq.length} generated`);
 
         aiMeta = {
-          isVariant:       aiContent.isVariant,
-          relatedCount:    related.length,
+          isVariant: aiContent.isVariant,
+          relatedCount: related.length,
           originalLogoName: logoName,
           finalLogoName,
-          versioned:       finalLogoName !== logoName,
-          brandUsed:       aiContent.brandUsed,
-          websiteUsed:     aiContent.websiteUsed,
-          industryUsed:    aiContent.industryUsed,
+          versioned: finalLogoName !== logoName,
+          brandUsed: aiContent.brandUsed,
+          websiteUsed: aiContent.websiteUsed,
+          industryUsed: aiContent.industryUsed,
         };
 
         // LLM's decided values always win over form-submitted hints
-        brand    = aiContent.brandUsed;
-        website  = aiContent.websiteUsed;
+        brand = aiContent.brandUsed;
+        website = aiContent.websiteUsed;
         industry = aiContent.industryUsed;
 
-        if (aiContent.metaTitle)       metaTitle       = aiContent.metaTitle;
+        if (aiContent.metaTitle) metaTitle = aiContent.metaTitle;
         if (aiContent.metaDescription) metaDescription = aiContent.metaDescription;
-        if (aiContent.description)     description     = aiContent.description;
-        if (aiContent.history)         history         = aiContent.history;
-        if (aiContent.altText)         altText         = aiContent.altText;
-        if (aiContent.tags.length)     tags            = aiContent.tags;
+        if (aiContent.description) description = aiContent.description;
+        if (aiContent.altText) altText = aiContent.altText;
+        if (aiContent.tags.length) tags = aiContent.tags;
 
         // ── Assign new OG / Twitter fields ───────────────────────────────────
-        ogTitle            = aiContent.ogTitle;
-        ogDescription      = aiContent.ogDescription;
-        twitterTitle       = aiContent.twitterTitle;
+        ogTitle = aiContent.ogTitle;
+        ogDescription = aiContent.ogDescription;
+        twitterTitle = aiContent.twitterTitle;
         twitterDescription = aiContent.twitterDescription;
         // twitterCardType stays "summary_large_image" (schema default)
+
+        // ── Schema source values from LLM (structured into JSON-LD below) ───
+        imageObjectDescription = aiContent.imageObjectDescription;
+        faqPairs = aiContent.faq;
 
         if (aiContent.relatedSlugs.length) relatedSlugs = aiContent.relatedSlugs;
         console.log(`[4d] ✓ AI content applied to logo`);
@@ -598,27 +1472,33 @@ export async function POST(req) {
           },
         });
         console.log("[4] ⚠ Falling back to manually entered fields");
-        if (!brand    || !brand.trim())    brand    = "cdrlogo.com";
-        if (!website  || !website.trim())  website  = "https://cdrlogo.com";
+        if (!brand || !brand.trim()) brand = "cdrlogo.com";
+        if (!website || !website.trim()) website = "https://cdrlogo.com";
         if (!industry || !industry.trim()) industry = "Logo Design & Graphics";
         try { tags = JSON.parse(formData.get("tags") || "[]"); } catch { }
-        // OG/Twitter fallbacks — simple but functional
-        ogTitle            = `${logoName} Logo — Free PNG & SVG Vector Download`;
-        ogDescription      = `Download the ${logoName} logo in PNG, SVG and vector formats for free. Transparent background, high resolution available at cdrlogo.com.`;
-        twitterTitle       = `${logoName} Logo PNG SVG Vector — Free Download`;
-        twitterDescription = `Download the ${logoName} logo for free — PNG, SVG, AI, CDR vector formats. Transparent & high resolution.`;
+        // OG/Twitter fallbacks — simple, compliant with banned-word rules
+        ogTitle = `${logoName} Logo — PNG & SVG Vector`;
+        ogDescription = `${logoName} logo available in PNG and SVG vector format for educational reference and research purposes.`;
+        twitterTitle = `${logoName} Logo — PNG SVG Vector`;
+        twitterDescription = `${logoName} logo in PNG and SVG vector format for educational reference and research use.`;
+        // Schema fallbacks
+        imageObjectDescription = `${logoName} logo image on cdrlogo.com`;
+        faqPairs = [];
       }
     } else {
       console.log("[4] AI DISABLED - Using manual fields only");
-      if (!brand    || !brand.trim())    brand    = "cdrlogo.com";
-      if (!website  || !website.trim())  website  = "https://cdrlogo.com";
+      if (!brand || !brand.trim()) brand = "cdrlogo.com";
+      if (!website || !website.trim()) website = "https://cdrlogo.com";
       if (!industry || !industry.trim()) industry = "Logo Design & Graphics";
       try { tags = JSON.parse(formData.get("tags") || "[]"); } catch { }
       // Manual-mode OG/Twitter: derive from whatever meta fields were submitted
-      ogTitle            = metaTitle  || `${logoName} Logo — Free PNG & SVG Vector Download`;
-      ogDescription      = metaDescription || `Download the ${logoName} logo in PNG, SVG and vector formats for free. Available at cdrlogo.com.`;
-      twitterTitle       = ogTitle;
+      ogTitle = metaTitle || `${logoName} Logo — PNG & SVG Vector`;
+      ogDescription = metaDescription || `${logoName} logo available in PNG and SVG vector format for educational reference purposes.`;
+      twitterTitle = ogTitle;
       twitterDescription = ogDescription.substring(0, 140);
+      // Schema fallbacks (manual mode — no LLM call)
+      imageObjectDescription = `${logoName} logo image on cdrlogo.com`;
+      faqPairs = [];
     }
 
     if (!description) {
@@ -629,10 +1509,10 @@ export async function POST(req) {
 
     // ── 5. process every ZIP ──────────────────────────────────────────────────
     console.log("[5] Processing ZIP contents...");
-    let publicFiles  = [];
+    let publicFiles = [];
     let privateFiles = [];
-    let svgContent   = null;
-    let fileSizes    = { svg: 0, png: 0, ai: 0, cdr: 0 };
+    let svgContent = null;
+    let fileSizes = { svg: 0, png: 0, ai: 0, cdr: 0 };
 
     for (let zipFile of zipFiles) {
       let arrayBuffer = await zipFile.arrayBuffer();
@@ -641,10 +1521,10 @@ export async function POST(req) {
       for (let entry of zip.getEntries()) {
         if (entry.isDirectory) continue;
 
-        let filename  = entry.entryName.split("/").pop();
-        let fileExt   = ext(filename);
-        let fileBuffer= entry.getData();
-        let fileSize  = (fileBuffer.length / 1024).toFixed(2);
+        let filename = entry.entryName.split("/").pop();
+        let fileExt = ext(filename);
+        let fileBuffer = entry.getData();
+        let fileSize = (fileBuffer.length / 1024).toFixed(2);
 
         console.log(`     - ${filename} (${fileSize} KB)`);
 
@@ -669,8 +1549,8 @@ export async function POST(req) {
           // Watermark applies to the public WebP preview only —
           // the private PNG is always stored clean/unwatermarked.
           let watermarked = await applyWatermark(fileBuffer, watermark);
-          let webpBuffer  = await sharp(watermarked).webp({ quality: 90 }).toBuffer();
-          let webpName    = filename.replace(/\.png$/i, ".webp");
+          let webpBuffer = await sharp(watermarked).webp({ quality: 90 }).toBuffer();
+          let webpName = filename.replace(/\.png$/i, ".webp");
           publicFiles.push({
             key: `public/${finalSlug}/${webpName}`,
             buffer: webpBuffer,
@@ -738,18 +1618,18 @@ export async function POST(req) {
       return match ? urlMap[match.key] : null;
     };
 
-    let svgUrl  = findUrl(f => f.key.endsWith(".svg"));
-    let pngUrl  = findUrl(f => f.key.endsWith(".png"));
+    let svgUrl = findUrl(f => f.key.endsWith(".svg"));
+    let pngUrl = findUrl(f => f.key.endsWith(".png"));
     let webpUrl = findUrl(f => f.key.endsWith(".webp"));
-    let aiUrl   = findUrl(f => f.key.endsWith(".ai"));
-    let cdrUrl  = findUrl(f => f.key.endsWith(".cdr"));
+    let aiUrl = findUrl(f => f.key.endsWith(".ai"));
+    let cdrUrl = findUrl(f => f.key.endsWith(".cdr"));
 
     console.log("[6a] Resolved file URLs:");
-    if (svgUrl)  console.log(`     SVG: ${svgUrl}`);
-    if (pngUrl)  console.log(`     PNG: ${pngUrl}`);
+    if (svgUrl) console.log(`     SVG: ${svgUrl}`);
+    if (pngUrl) console.log(`     PNG: ${pngUrl}`);
     if (webpUrl) console.log(`     WebP (public): ${webpUrl}`);
-    if (aiUrl)   console.log(`     AI: ${aiUrl}`);
-    if (cdrUrl)  console.log(`     CDR: ${cdrUrl}`);
+    if (aiUrl) console.log(`     AI: ${aiUrl}`);
+    if (cdrUrl) console.log(`     CDR: ${cdrUrl}`);
 
     // ── ogImageUrl: use the public WebP as the OG/Twitter card image ─────────
     // This is the 1200x630-friendly public preview. If no WebP exists (edge
@@ -757,6 +1637,32 @@ export async function POST(req) {
     // site-wide default OG image.
     ogImageUrl = webpUrl || null;
     console.log(`[6b] ogImageUrl set to: ${ogImageUrl || "null (no WebP available)"}`);
+
+    // ── 6c. build structured schema JSON-LD (NEW) ─────────────────────────────
+    // ImageObject + BreadcrumbList + FAQ — these are stored as JSON in the DB
+    // (Logo.imageObjectSchema / breadcrumbSchema / faqSchema) so the frontend
+    // can inject them as <script type="application/ld+json"> in <head>.
+    console.log("[6c] Building schema JSON-LD...");
+
+    imageObjectSchema = buildImageObjectSchema({
+      imageUrl: ogImageUrl,
+      logoName: finalLogoName,
+      brand,
+      canonicalUrl,
+      description: imageObjectDescription,
+    });
+
+    breadcrumbSchema = buildBreadcrumbSchema({
+      brand,
+      logoName: finalLogoName,
+      canonicalUrl,
+    });
+
+    faqSchema = buildFaqSchema(faqPairs);
+
+    console.log(`[6c] ✓ imageObjectSchema: ${Object.keys(imageObjectSchema).length ? "built" : "empty (no image)"}`);
+    console.log(`[6c] ✓ breadcrumbSchema: built (Home > ${brand || "Logos"} > ${finalLogoName})`);
+    console.log(`[6c] ✓ faqSchema: ${faqSchema.length} question(s)`);
 
     // ── 7. save to DB ─────────────────────────────────────────────────────────
     console.log("[7] Saving logo to database...");
@@ -769,14 +1675,15 @@ export async function POST(req) {
     console.log(`     ogTitle         : "${ogTitle}"`);
     console.log(`     ogDescription   : "${ogDescription?.substring(0, 60)}..."`);
     console.log(`     ogImageUrl      : "${ogImageUrl || "null"}"`);
+    console.log(`     ogType          : "website"`);
     console.log(`     twitterTitle    : "${twitterTitle}"`);
     console.log(`     twitterCardType : "${twitterCardType}"`);
     console.log(`     Tags (${tags.length}): ${tags.slice(0, 5).join(", ")}${tags.length > 5 ? "..." : ""}`);
 
     let logo = await prisma.logo.create({
       data: {
-        logoName:     finalLogoName,
-        slug:         finalSlug,
+        logoName: finalLogoName,
+        slug: finalSlug,
         brand,
         website,
         category,
@@ -784,7 +1691,6 @@ export async function POST(req) {
         country,
         license,
         description,
-        history,
         tags,
         brandColors,
         publishStatus,
@@ -798,21 +1704,26 @@ export async function POST(req) {
         metaTitle,
         metaDescription,
         altText,
-        svgfilesize:  formatSize(fileSizes.svg),
-        pngfilesize:  formatSize(fileSizes.png),
-        aifilesize:   formatSize(fileSizes.ai),
-        cdrfilesize:  formatSize(fileSizes.cdr),
+        svgfilesize: formatSize(fileSizes.svg),
+        pngfilesize: formatSize(fileSizes.png),
+        aifilesize: formatSize(fileSizes.ai),
+        cdrfilesize: formatSize(fileSizes.cdr),
 
         // ── SEO / social fields ─────────────────────────────────────────────
         canonicalUrl,
         ogTitle,
         ogDescription,
         ogImageUrl,               // public WebP URL (watermarked preview)
-        ogType:            "website",
+        ogType: "website",        // changed from "website" → "article"
         twitterTitle,
         twitterDescription,
-        twitterImage:      ogImageUrl,   // same image reused for Twitter card
+        twitterImage: ogImageUrl,   // same image reused for Twitter card
         twitterCardType,
+
+        // ── Schema fields (NEW) ──────────────────────────────────────────────
+        imageObjectSchema,
+        breadcrumbSchema,
+        faqSchema,
       },
     });
     console.log(`[7] ✓ Logo saved to DB with ID: ${logo.id}`);
@@ -837,8 +1748,8 @@ export async function POST(req) {
       logo,
       ai: aiMeta,
       files: {
-        public:  publicFiles.map(f  => ({ key: f.key,  url: urlMap[f.key]  })),
-        private: privateFiles.map(f => ({ key: f.key,  url: urlMap[f.key]  })),
+        public: publicFiles.map(f => ({ key: f.key, url: urlMap[f.key] })),
+        private: privateFiles.map(f => ({ key: f.key, url: urlMap[f.key] })),
       },
     });
 

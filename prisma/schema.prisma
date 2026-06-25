@@ -67,7 +67,10 @@ model Logo {
   twitterImage       String?
   twitterCardType    String? @default("summary_large_image")
 
-
+  //
+  imageObjectSchema Json? @default("{}")
+  breadcrumbSchema  Json? @default("{}")
+  faqSchema         Json  @default("[]")
 
   // ── Publishing ─────────────────────────────────────────────────────────────
   publishStatus String @default("Draft")

@@ -152,6 +152,9 @@ export type LogoCountAggregateOutputType = {
   twitterDescription: number
   twitterImage: number
   twitterCardType: number
+  imageObjectSchema: number
+  breadcrumbSchema: number
+  faqSchema: number
   publishStatus: number
   downloadCount: number
   downloadedNumberByPeople: number
@@ -287,6 +290,9 @@ export type LogoCountAggregateInputType = {
   twitterDescription?: true
   twitterImage?: true
   twitterCardType?: true
+  imageObjectSchema?: true
+  breadcrumbSchema?: true
+  faqSchema?: true
   publishStatus?: true
   downloadCount?: true
   downloadedNumberByPeople?: true
@@ -417,6 +423,9 @@ export type LogoGroupByOutputType = {
   twitterDescription: string | null
   twitterImage: string | null
   twitterCardType: string | null
+  imageObjectSchema: runtime.JsonValue | null
+  breadcrumbSchema: runtime.JsonValue | null
+  faqSchema: runtime.JsonValue
   publishStatus: string
   downloadCount: string
   downloadedNumberByPeople: number
@@ -483,6 +492,9 @@ export type LogoWhereInput = {
   twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  imageObjectSchema?: Prisma.JsonNullableFilter<"Logo">
+  breadcrumbSchema?: Prisma.JsonNullableFilter<"Logo">
+  faqSchema?: Prisma.JsonFilter<"Logo">
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -527,6 +539,9 @@ export type LogoOrderByWithRelationInput = {
   twitterDescription?: Prisma.SortOrderInput | Prisma.SortOrder
   twitterImage?: Prisma.SortOrderInput | Prisma.SortOrder
   twitterCardType?: Prisma.SortOrderInput | Prisma.SortOrder
+  imageObjectSchema?: Prisma.SortOrderInput | Prisma.SortOrder
+  breadcrumbSchema?: Prisma.SortOrderInput | Prisma.SortOrder
+  faqSchema?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -574,6 +589,9 @@ export type LogoWhereUniqueInput = Prisma.AtLeast<{
   twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  imageObjectSchema?: Prisma.JsonNullableFilter<"Logo">
+  breadcrumbSchema?: Prisma.JsonNullableFilter<"Logo">
+  faqSchema?: Prisma.JsonFilter<"Logo">
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -618,6 +636,9 @@ export type LogoOrderByWithAggregationInput = {
   twitterDescription?: Prisma.SortOrderInput | Prisma.SortOrder
   twitterImage?: Prisma.SortOrderInput | Prisma.SortOrder
   twitterCardType?: Prisma.SortOrderInput | Prisma.SortOrder
+  imageObjectSchema?: Prisma.SortOrderInput | Prisma.SortOrder
+  breadcrumbSchema?: Prisma.SortOrderInput | Prisma.SortOrder
+  faqSchema?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -669,6 +690,9 @@ export type LogoScalarWhereWithAggregatesInput = {
   twitterDescription?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   twitterImage?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
   twitterCardType?: Prisma.StringNullableWithAggregatesFilter<"Logo"> | string | null
+  imageObjectSchema?: Prisma.JsonNullableWithAggregatesFilter<"Logo">
+  breadcrumbSchema?: Prisma.JsonNullableWithAggregatesFilter<"Logo">
+  faqSchema?: Prisma.JsonWithAggregatesFilter<"Logo">
   publishStatus?: Prisma.StringWithAggregatesFilter<"Logo"> | string
   downloadCount?: Prisma.StringWithAggregatesFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntWithAggregatesFilter<"Logo"> | number
@@ -712,6 +736,9 @@ export type LogoCreateInput = {
   twitterDescription?: string | null
   twitterImage?: string | null
   twitterCardType?: string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -756,6 +783,9 @@ export type LogoUncheckedCreateInput = {
   twitterDescription?: string | null
   twitterImage?: string | null
   twitterCardType?: string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -800,6 +830,9 @@ export type LogoUpdateInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -844,6 +877,9 @@ export type LogoUncheckedUpdateInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -888,6 +924,9 @@ export type LogoCreateManyInput = {
   twitterDescription?: string | null
   twitterImage?: string | null
   twitterCardType?: string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -931,6 +970,9 @@ export type LogoUpdateManyMutationInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -974,6 +1016,9 @@ export type LogoUncheckedUpdateManyInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1017,6 +1062,9 @@ export type LogoCountOrderByAggregateInput = {
   twitterDescription?: Prisma.SortOrder
   twitterImage?: Prisma.SortOrder
   twitterCardType?: Prisma.SortOrder
+  imageObjectSchema?: Prisma.SortOrder
+  breadcrumbSchema?: Prisma.SortOrder
+  faqSchema?: Prisma.SortOrder
   publishStatus?: Prisma.SortOrder
   downloadCount?: Prisma.SortOrder
   downloadedNumberByPeople?: Prisma.SortOrder
@@ -1218,6 +1266,9 @@ export type LogoCreateWithoutFavoritedByInput = {
   twitterDescription?: string | null
   twitterImage?: string | null
   twitterCardType?: string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -1261,6 +1312,9 @@ export type LogoUncheckedCreateWithoutFavoritedByInput = {
   twitterDescription?: string | null
   twitterImage?: string | null
   twitterCardType?: string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: string
   downloadCount?: string
   downloadedNumberByPeople?: number
@@ -1328,6 +1382,9 @@ export type LogoScalarWhereInput = {
   twitterDescription?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterImage?: Prisma.StringNullableFilter<"Logo"> | string | null
   twitterCardType?: Prisma.StringNullableFilter<"Logo"> | string | null
+  imageObjectSchema?: Prisma.JsonNullableFilter<"Logo">
+  breadcrumbSchema?: Prisma.JsonNullableFilter<"Logo">
+  faqSchema?: Prisma.JsonFilter<"Logo">
   publishStatus?: Prisma.StringFilter<"Logo"> | string
   downloadCount?: Prisma.StringFilter<"Logo"> | string
   downloadedNumberByPeople?: Prisma.IntFilter<"Logo"> | number
@@ -1371,6 +1428,9 @@ export type LogoUpdateWithoutFavoritedByInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1414,6 +1474,9 @@ export type LogoUncheckedUpdateWithoutFavoritedByInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1457,6 +1520,9 @@ export type LogoUncheckedUpdateManyWithoutFavoritedByInput = {
   twitterDescription?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterImage?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   twitterCardType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageObjectSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  breadcrumbSchema?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  faqSchema?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   publishStatus?: Prisma.StringFieldUpdateOperationsInput | string
   downloadCount?: Prisma.StringFieldUpdateOperationsInput | string
   downloadedNumberByPeople?: Prisma.IntFieldUpdateOperationsInput | number
@@ -1531,6 +1597,9 @@ export type LogoSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   twitterDescription?: boolean
   twitterImage?: boolean
   twitterCardType?: boolean
+  imageObjectSchema?: boolean
+  breadcrumbSchema?: boolean
+  faqSchema?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1576,6 +1645,9 @@ export type LogoSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   twitterDescription?: boolean
   twitterImage?: boolean
   twitterCardType?: boolean
+  imageObjectSchema?: boolean
+  breadcrumbSchema?: boolean
+  faqSchema?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1619,6 +1691,9 @@ export type LogoSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   twitterDescription?: boolean
   twitterImage?: boolean
   twitterCardType?: boolean
+  imageObjectSchema?: boolean
+  breadcrumbSchema?: boolean
+  faqSchema?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1662,6 +1737,9 @@ export type LogoSelectScalar = {
   twitterDescription?: boolean
   twitterImage?: boolean
   twitterCardType?: boolean
+  imageObjectSchema?: boolean
+  breadcrumbSchema?: boolean
+  faqSchema?: boolean
   publishStatus?: boolean
   downloadCount?: boolean
   downloadedNumberByPeople?: boolean
@@ -1669,7 +1747,7 @@ export type LogoSelectScalar = {
   updatedAt?: boolean
 }
 
-export type LogoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "logoName" | "slug" | "brand" | "website" | "category" | "industry" | "country" | "license" | "description" | "history" | "tags" | "brandColors" | "webpUrl" | "svgUrl" | "pngUrl" | "aiUrl" | "cdrUrl" | "svgfilesize" | "pngfilesize" | "aifilesize" | "cdrfilesize" | "svgContent" | "metaTitle" | "metaDescription" | "altText" | "canonicalUrl" | "ogImageUrl" | "ogTitle" | "ogDescription" | "ogType" | "twitterTitle" | "twitterDescription" | "twitterImage" | "twitterCardType" | "publishStatus" | "downloadCount" | "downloadedNumberByPeople" | "createdAt" | "updatedAt", ExtArgs["result"]["logo"]>
+export type LogoOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "logoName" | "slug" | "brand" | "website" | "category" | "industry" | "country" | "license" | "description" | "history" | "tags" | "brandColors" | "webpUrl" | "svgUrl" | "pngUrl" | "aiUrl" | "cdrUrl" | "svgfilesize" | "pngfilesize" | "aifilesize" | "cdrfilesize" | "svgContent" | "metaTitle" | "metaDescription" | "altText" | "canonicalUrl" | "ogImageUrl" | "ogTitle" | "ogDescription" | "ogType" | "twitterTitle" | "twitterDescription" | "twitterImage" | "twitterCardType" | "imageObjectSchema" | "breadcrumbSchema" | "faqSchema" | "publishStatus" | "downloadCount" | "downloadedNumberByPeople" | "createdAt" | "updatedAt", ExtArgs["result"]["logo"]>
 export type LogoInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   favoritedBy?: boolean | Prisma.Logo$favoritedByArgs<ExtArgs>
   _count?: boolean | Prisma.LogoCountOutputTypeDefaultArgs<ExtArgs>
@@ -1718,6 +1796,9 @@ export type $LogoPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     twitterDescription: string | null
     twitterImage: string | null
     twitterCardType: string | null
+    imageObjectSchema: runtime.JsonValue | null
+    breadcrumbSchema: runtime.JsonValue | null
+    faqSchema: runtime.JsonValue
     publishStatus: string
     downloadCount: string
     downloadedNumberByPeople: number
@@ -2182,6 +2263,9 @@ export interface LogoFieldRefs {
   readonly twitterDescription: Prisma.FieldRef<"Logo", 'String'>
   readonly twitterImage: Prisma.FieldRef<"Logo", 'String'>
   readonly twitterCardType: Prisma.FieldRef<"Logo", 'String'>
+  readonly imageObjectSchema: Prisma.FieldRef<"Logo", 'Json'>
+  readonly breadcrumbSchema: Prisma.FieldRef<"Logo", 'Json'>
+  readonly faqSchema: Prisma.FieldRef<"Logo", 'Json'>
   readonly publishStatus: Prisma.FieldRef<"Logo", 'String'>
   readonly downloadCount: Prisma.FieldRef<"Logo", 'String'>
   readonly downloadedNumberByPeople: Prisma.FieldRef<"Logo", 'Int'>
