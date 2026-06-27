@@ -19,8 +19,6 @@ It includes:
 * User authentication
 * File upload system
 * AI-generated SEO metadata
-* Payment processing
-* Shipping automation
 * Email notifications
 * Admin dashboard
 * Automated cron jobs
@@ -35,8 +33,6 @@ It includes:
 | React                 | UI Components      |
 | Prisma                | Database ORM       |
 | PostgreSQL / Supabase | Database           |
-| Stripe                | Payments           |
-| FedEx API             | Shipping           |
 | OpenAI API            | SEO Generation     |
 | Cloudflare R2         | File Storage       |
 | Nodemailer            | Emails             |
@@ -49,15 +45,8 @@ It includes:
 app/
 │
 ├── api/                # All backend APIs
-│   ├── auth/
-│   ├── payment/
-│   ├── fedex/
-│   ├── upload/
-│   ├── orders/
-│   └── cron/
 │
 ├── components/         # Reusable components
-├── dashboard/          # User dashboard
 ├── admin/             # Admin panel
 ├── page.js            # Homepage
 │
@@ -114,11 +103,8 @@ Example routes:
 
 ```bash
 /app/api/auth
-/app/api/payment
-/app/api/fedex
 /app/api/upload
 /app/api/orders
-/app/api/test-cron
 ```
 
 ---
@@ -165,13 +151,10 @@ R2_SECRET_ACCESS_KEY=
 ✅ User Authentication
 ✅ Logo Upload System
 ✅ AI SEO Metadata Generation
-✅ Stripe Payment Integration
-✅ FedEx Shipping Integration
 ✅ Email Notifications
 ✅ Admin Dashboard
 ✅ Seller Onboarding
 ✅ Order Management
-✅ Automated Cron Jobs
 ✅ Cloud Storage with R2
 
 ---
@@ -206,11 +189,6 @@ Recommended deployment:
 * Supabase
 * Cloudflare R2
 
-Deploy easily with:
-
-```bash
-git push origin main
-```
 
 ---
 
