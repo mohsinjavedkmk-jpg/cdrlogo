@@ -26,6 +26,22 @@ function mime(filename) {
   return MIME[ext(filename)] || "application/octet-stream";
 }
 
+function sanitizeFilename(filename) {
+  let lastDot = filename.lastIndexOf(".");
+  let name = lastDot !== -1 ? filename.slice(0, lastDot) : filename;
+  let extension = lastDot !== -1 ? filename.slice(lastDot) : "";
+
+  let cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `${cleanName}${extension.toLowerCase()}`;
+}
+
 // ── XML escape ────────────────────────────────────────────────────────────────
 function escapeXml(str) {
   return String(str)
@@ -359,13 +375,13 @@ function buildBreadcrumbSchema({ brand, logoName, canonicalUrl }) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://cdrlogo.com/",
+        "item": "https://www.cdrlogo.com/",
       },
       {
         "@type": "ListItem",
         "position": 2,
         "name": brandLabel,
-        "item": `https://cdrlogo.com/brand/${brandSlug}/`,
+        "item": `https://www.cdrlogo.com/brand/${brandSlug}/`,
       },
       {
         "@type": "ListItem",
@@ -1268,7 +1284,7 @@ ONLY the corrected JSON object, with the same structure as before.`;
     altText: parsed.alt_text || `${logoName} logo — PNG SVG vector file on cdrlogo.com`,
     tags: Array.isArray(parsed.tags) && parsed.tags.length
       ? parsed.tags
-      : [logoName, "logo", "PNG", "SVG", "vector",  "cdrlogo.com"],
+      : [logoName, "logo", "PNG", "SVG", "vector", "cdrlogo.com"],
 
     // ── New OG / Twitter fields ─────────────────────────────────────────────
 
@@ -1359,7 +1375,7 @@ export async function POST(req) {
 
     // canonicalUrl is always cdrlogo.com/logos/{slug}/ — rebuilt after
     // potential auto-versioning settles the final slug.
-    let canonicalUrl = `https://cdrlogo.com/logo/${slug}/`;
+    let canonicalUrl = `https://www.cdrlogo.com/logo/${slug}/`;
 
     // ── New SEO vars with safe defaults (overwritten by AI below) ────────────
     let ogTitle = "";
@@ -1402,7 +1418,7 @@ export async function POST(req) {
             );
           }
           // Rebuild canonicalUrl after versioned slug is finalised
-          canonicalUrl = `https://cdrlogo.com/logo/${finalSlug}/`;
+          canonicalUrl = `https://www.cdrlogo.com/logo/${finalSlug}/`;
         } else {
           console.log(`[4b] No exact matches — this is a new logo, no versioning needed`);
         }
@@ -1523,6 +1539,7 @@ export async function POST(req) {
         if (entry.isDirectory) continue;
 
         let filename = entry.entryName.split("/").pop();
+        filename = sanitizeFilename(filename);
         let fileExt = ext(filename);
         let fileBuffer = entry.getData();
         let fileSize = (fileBuffer.length / 1024).toFixed(2);
@@ -1703,7 +1720,7 @@ export async function POST(req) {
         cdrUrl,
         svgContent,
         metaTitle,
-        metaDescription,
+        metaDescription: metaDescription.trim(),
         altText,
         svgfilesize: formatSize(fileSizes.svg),
         pngfilesize: formatSize(fileSizes.png),

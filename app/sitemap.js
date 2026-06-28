@@ -21,13 +21,17 @@ export default async function sitemap() {
   // -------------------------------
   // SAFE CATEGORY EXTRACTION
   // -------------------------------
-  const categories = [
-    ...new Set(
-      logos
-        .map(l => l.category)
-        .filter(cat => typeof cat === "string" && cat.trim() !== "")
-    )
-  ];
+const categories = [
+  ...new Set(
+    logos
+      .map(l =>
+        typeof l.category === "string"
+          ? l.category.trim().toLowerCase().replace(/\s+/g, "-")
+          : null
+      )
+      .filter(cat => cat)
+  )
+];
 
   // -------------------------------
   // STATIC + IMPORTANT ROUTES

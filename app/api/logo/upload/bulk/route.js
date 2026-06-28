@@ -26,6 +26,22 @@ function mime(filename) {
   return MIME[ext(filename)] || "application/octet-stream";
 }
 
+function sanitizeFilename(filename) {
+  const lastDot = filename.lastIndexOf(".");
+  const name = lastDot !== -1 ? filename.slice(0, lastDot) : filename;
+  const extension = lastDot !== -1 ? filename.slice(lastDot) : "";
+
+  const cleanName = name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/--+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return `${cleanName}${extension.toLowerCase()}`;
+}
+
 // ── XML escape ────────────────────────────────────────────────────────────────
 function escapeXml(str) {
   return String(str)
@@ -82,14 +98,14 @@ async function applyWatermark(buffer, wm) {
 
   let tx, ty;
   switch (position) {
-    case "top-left":      tx = pad;                         ty = pad;               break;
-    case "top-right":     tx = W - pad - textW;             ty = pad;               break;
-    case "top-center":    tx = Math.round((W - textW) / 2); ty = pad;               break;
-    case "bottom-left":   tx = pad;                         ty = H - pad - textH;  break;
-    case "bottom-right":  tx = W - pad - textW;             ty = H - pad - textH;  break;
-    case "bottom-center": tx = Math.round((W - textW) / 2); ty = H - pad - textH;  break;
+    case "top-left": tx = pad; ty = pad; break;
+    case "top-right": tx = W - pad - textW; ty = pad; break;
+    case "top-center": tx = Math.round((W - textW) / 2); ty = pad; break;
+    case "bottom-left": tx = pad; ty = H - pad - textH; break;
+    case "bottom-right": tx = W - pad - textW; ty = H - pad - textH; break;
+    case "bottom-center": tx = Math.round((W - textW) / 2); ty = H - pad - textH; break;
     case "center":
-    default:              tx = Math.round((W - textW) / 2); ty = Math.round((H - textH) / 2); break;
+    default: tx = Math.round((W - textW) / 2); ty = Math.round((H - textH) / 2); break;
   }
 
   tx = Math.max(0, Math.min(tx, W - textW));
@@ -161,11 +177,14 @@ function extractCategoryNames(categoriesJson) {
   if (!Array.isArray(list)) return [];
   return list
     .map((c) => {
-      if (typeof c === "string") return c;
-      if (c && typeof c === "object") return c.name || c.title || c.label || c.slug || null;
+      if (typeof c === "string") return { name: c, slug: generateSlugFromName(c) };
+      if (c && typeof c === "object" && (c.name || c.title || c.label)) return {
+        name: c.name || c.title || c.label || "",
+        slug: c.slug || generateSlugFromName(c.name || c.title || c.label || ""),
+      };
       return null;
     })
-    .filter(Boolean);
+    .filter((c) => c && c.name);
 }
 
 // ── Banned phrases & educational phrases ─────────────────────────────────────
@@ -229,14 +248,14 @@ function validateAIContent(parsed, { usedTitles = [], usedOpeners = [] } = {}) {
   const violations = [];
 
   const fieldsToScan = {
-    meta_title:               parsed.meta_title,
-    meta_description:         parsed.meta_description,
-    main_description:         parsed.main_description,
-    alt_text:                 parsed.alt_text,
-    og_title:                 parsed.og_title,
-    og_description:           parsed.og_description,
-    twitter_title:            parsed.twitter_title,
-    twitter_description:      parsed.twitter_description,
+    meta_title: parsed.meta_title,
+    meta_description: parsed.meta_description,
+    main_description: parsed.main_description,
+    alt_text: parsed.alt_text,
+    og_title: parsed.og_title,
+    og_description: parsed.og_description,
+    twitter_title: parsed.twitter_title,
+    twitter_description: parsed.twitter_description,
     image_object_description: parsed.image_object_description,
   };
 
@@ -283,14 +302,14 @@ function validateAIContent(parsed, { usedTitles = [], usedOpeners = [] } = {}) {
 // ── Schema builders ───────────────────────────────────────────────────────────
 function buildBreadcrumbSchema({ brand, logoName, canonicalUrl }) {
   const brandLabel = (brand && brand.trim()) ? brand.trim() : "Logos";
-  const brandSlug  = generateSlugFromName(brandLabel);
+  const brandSlug = generateSlugFromName(brandLabel);
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home",      "item": "https://cdrlogo.com/" },
-      { "@type": "ListItem", "position": 2, "name": brandLabel,  "item": `https://cdrlogo.com/brand/${brandSlug}/` },
-      { "@type": "ListItem", "position": 3, "name": logoName,    "item": canonicalUrl },
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.cdrlogo.com/" },
+      { "@type": "ListItem", "position": 2, "name": brandLabel, "item": `https://www.cdrlogo.com/brand/${brandSlug}/` },
+      { "@type": "ListItem", "position": 3, "name": logoName, "item": canonicalUrl },
     ],
   };
 }
@@ -406,18 +425,18 @@ async function generateAIContent({
 
   const relatedContext = isVariant
     ? relatedLogos
-        .slice(0, 5)
-        .map(
-          (r, i) =>
-            `Previous version ${i + 1}:\n- Name: ${r.logoName}\n- Meta Title: ${r.metaTitle || "N/A"}\n- Meta Description: ${r.metaDescription || "N/A"}\n- Description: ${r.description || "N/A"}\n- Tags: ${Array.isArray(r.tags) ? r.tags.join(", ") : "N/A"}`
-        )
-        .join("\n\n")
+      .slice(0, 5)
+      .map(
+        (r, i) =>
+          `Previous version ${i + 1}:\n- Name: ${r.logoName}\n- Meta Title: ${r.metaTitle || "N/A"}\n- Meta Description: ${r.metaDescription || "N/A"}\n- Description: ${r.description || "N/A"}\n- Tags: ${Array.isArray(r.tags) ? r.tags.join(", ") : "N/A"}`
+      )
+      .join("\n\n")
     : "";
 
   const usedOpeners = isVariant
     ? relatedLogos
-        .map((r) => (r.description || "").split(/[.!?]/)[0].trim())
-        .filter(Boolean)
+      .map((r) => (r.description || "").split(/[.!?]/)[0].trim())
+      .filter(Boolean)
     : [];
 
   const hasCategoryList = availableCategories.length > 0;
@@ -556,11 +575,11 @@ LOGO DETAILS
 
 Logo Name     : ${logoName}
 Canonical URL : ${canonicalUrl}
-Uploader category hint (may be wrong or missing): ${userCategory || "(none provided)"}
+
 ${hasCategoryList
-    ? `\nAvailable site categories (pick EXACTLY ONE, copy the string verbatim — do not invent or modify):\n${availableCategories.map((c) => `- ${c}`).join("\n")}`
-    : `\nNo category list configured. Use the uploader hint or your best short classification.`
-  }
+  ? `Category: Pick EXACTLY ONE from this list based on the logo's brand/industry. Copy verbatim:\n${availableCategories.map((c) => `- ${c.name}`).join("\n")}`
+  : `Category: Use your best classification for this logo's industry.`
+}
 
 Brand   : UNKNOWN — infer real brand if confidently identifiable
 Website : UNKNOWN
@@ -755,8 +774,8 @@ Return ONLY VALID JSON:
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 
   // ── Server-side compliance check ──────────────────────────────────────────
-  const usedTitles  = relatedLogos.map((r) => r.metaTitle).filter(Boolean);
-  const violations  = validateAIContent(parsed, { usedTitles, usedOpeners });
+  const usedTitles = relatedLogos.map((r) => r.metaTitle).filter(Boolean);
+  const violations = validateAIContent(parsed, { usedTitles, usedOpeners });
 
   if (violations.length) {
     console.warn(`  [AI Validation] ${violations.length} violation(s) found, re-calling OpenAI once:`);
@@ -798,27 +817,23 @@ ONLY the corrected JSON object, with the same structure as before.`;
   }
 
   // ── Resolve category ──────────────────────────────────────────────────────
-  let resolvedCategory = String(parsed.category || "").trim();
-  if (hasCategoryList) {
-    const match = availableCategories.find(
-      (c) => c.toLowerCase() === resolvedCategory.toLowerCase()
-    );
-    resolvedCategory =
-      match ||
-      availableCategories.find(
-        (c) => c.toLowerCase() === String(userCategory || "").toLowerCase()
-      ) ||
-      userCategory ||
-      availableCategories[0];
-  } else if (!resolvedCategory) {
-    resolvedCategory = userCategory || "";
-  }
+let resolvedCategory = String(parsed.category || "").trim();
+
+if (hasCategoryList) {
+  const match = availableCategories.find(
+    (c) => c.name.toLowerCase() === resolvedCategory.toLowerCase()
+  );
+  // LLM pick wins, fallback to first DB category — no frontend influence
+  resolvedCategory = match?.name || availableCategories[0]?.name || "";
+} else {
+  resolvedCategory = resolvedCategory || "";
+}
 
   // ── Resolve brand / country / industry / website ──────────────────────────
-  const brand    = (parsed.brand_used    && String(parsed.brand_used).trim())    || "";
-  const country  = (parsed.country_used  && String(parsed.country_used).trim())  || "Worldwide";
+  const brand = (parsed.brand_used && String(parsed.brand_used).trim()) || "";
+  const country = (parsed.country_used && String(parsed.country_used).trim()) || "Worldwide";
   const industry = (parsed.industry_used && String(parsed.industry_used).trim()) || "Logo Design & Graphics";
-  const website  = (parsed.website_used  && String(parsed.website_used).trim())  || "";
+  const website = (parsed.website_used && String(parsed.website_used).trim()) || "";
 
   // ── Field fallbacks (educational-tone, banned-word-free) ─────────────────
   const metaTitle = parsed.meta_title ||
@@ -877,24 +892,24 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     const { related, exactNormalizedMatches } = await findRelatedLogos(rawLogoName);
 
     let finalLogoName = rawLogoName;
-    let versioned     = false;
+    let versioned = false;
 
     if (exactNormalizedMatches.length > 0) {
       finalLogoName = generateVersionedName(rawLogoName, exactNormalizedMatches);
-      versioned     = true;
+      versioned = true;
       console.log(`  [name] Auto-versioned: "${rawLogoName}" → "${finalLogoName}"`);
     }
 
-    const finalSlug    = generateSlugFromName(finalLogoName);
-    const canonicalUrl = `https://cdrlogo.com/logo/${finalSlug}/`;
+    const finalSlug = generateSlugFromName(finalLogoName);
+    const canonicalUrl = `https://www.cdrlogo.com/logo/${finalSlug}/`;
     console.log(`  [slug] ${finalSlug}`);
 
     // ── Step B: AI content generation ────────────────────────────────────────
     const aiContent = await generateAIContent({
-      logoName:             finalLogoName,
-      userCategory:         sharedFields.category,
-      availableCategories:  sharedFields.availableCategories,
-      relatedLogos:         related,
+      logoName: finalLogoName,
+      userCategory: sharedFields.category,
+      availableCategories: sharedFields.availableCategories,
+      relatedLogos: related,
       canonicalUrl,
     });
 
@@ -904,51 +919,54 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     console.log(`  [ai] tags: ${aiContent.tags.length} | faq pairs: ${aiContent.faqPairs.length}`);
 
     // ── Step C: classify & process files ─────────────────────────────────────
-    const publicFiles  = [];
+    const publicFiles = [];
     const privateFiles = [];
-    let   svgContent   = null;
-    const fileSizes    = { svg: 0, png: 0, ai: 0, cdr: 0 };
+    let svgContent = null;
+    const fileSizes = { svg: 0, png: 0, ai: 0, cdr: 0 };
 
     for (const { filename, buffer: fileBuffer } of folderFiles) {
-      const fileExt  = ext(filename);
+      const safeFilename = sanitizeFilename(filename);
+      const fileExt = ext(safeFilename);
 
       if (fileExt === "html" || fileExt === "htm") {
-        console.log(`  [skip] Ignoring HTML file: ${filename}`);
+        console.log(`  [skip] Ignoring HTML file: ${safeFilename}`);
         continue;
       }
 
       const fileSize = (fileBuffer.length / 1024).toFixed(2);
-      console.log(`  [file] ${filename} (${fileSize} KB)`);
+      console.log(`  [file] ${filename} → ${safeFilename} (${fileSize} KB)`);
 
       if (fileExt === "svg") {
-        privateFiles.push({ key: `separate/${finalSlug}/${filename}`, buffer: fileBuffer, contentType: mime(filename) });
+        privateFiles.push({ key: `separate/${finalSlug}/${safeFilename}`, buffer: fileBuffer, contentType: mime(safeFilename) });
         fileSizes.svg = fileBuffer.length;
         if (!svgContent) svgContent = fileBuffer.toString("utf-8");
 
       } else if (fileExt === "png") {
-        privateFiles.push({ key: `separate/${finalSlug}/${filename}`, buffer: fileBuffer, contentType: mime(filename) });
+        privateFiles.push({ key: `separate/${finalSlug}/${safeFilename}`, buffer: fileBuffer, contentType: mime(safeFilename) });
         fileSizes.png = fileBuffer.length;
 
         const watermarked = await applyWatermark(fileBuffer, watermark);
-        const webpBuffer  = await sharp(watermarked).webp({ quality: 90 }).toBuffer();
-        const webpName    = filename.replace(/\.png$/i, ".webp");
+        const webpBuffer = await sharp(watermarked).webp({ quality: 90 }).toBuffer();
+        const webpName = safeFilename.replace(/\.png$/i, ".webp");
         publicFiles.push({ key: `public/${finalSlug}/${webpName}`, buffer: webpBuffer, contentType: "image/webp" });
 
       } else if (fileExt === "ai") {
-        privateFiles.push({ key: `separate/${finalSlug}/${filename}`, buffer: fileBuffer, contentType: mime(filename) });
+        privateFiles.push({ key: `separate/${finalSlug}/${safeFilename}`, buffer: fileBuffer, contentType: mime(safeFilename) });
         fileSizes.ai = fileBuffer.length;
 
       } else if (fileExt === "cdr") {
-        privateFiles.push({ key: `separate/${finalSlug}/${filename}`, buffer: fileBuffer, contentType: mime(filename) });
+        privateFiles.push({ key: `separate/${finalSlug}/${safeFilename}`, buffer: fileBuffer, contentType: mime(safeFilename) });
         fileSizes.cdr = fileBuffer.length;
 
+
       } else {
-        privateFiles.push({ key: `private/${finalSlug}/${filename}`, buffer: fileBuffer, contentType: mime(filename) });
+        privateFiles.push({ key: `private/${finalSlug}/${safeFilename}`, buffer: fileBuffer, contentType: mime(safeFilename) });
       }
+
     }
 
     // ── Step D: upload to R2 ──────────────────────────────────────────────────
-    const allUploads    = [...publicFiles, ...privateFiles];
+    const allUploads = [...publicFiles, ...privateFiles];
     const uploadResults = await Promise.all(
       allUploads.map(async ({ key, buffer, contentType }) => {
         try {
@@ -968,11 +986,11 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       return match ? urlMap[match.key] : null;
     };
 
-    const svgUrl  = findUrl((f) => f.key.endsWith(".svg"));
-    const pngUrl  = findUrl((f) => f.key.endsWith(".png"));
+    const svgUrl = findUrl((f) => f.key.endsWith(".svg"));
+    const pngUrl = findUrl((f) => f.key.endsWith(".png"));
     const webpUrl = findUrl((f) => f.key.endsWith(".webp"));
-    const aiUrl   = findUrl((f) => f.key.endsWith(".ai"));
-    const cdrUrl  = findUrl((f) => f.key.endsWith(".cdr"));
+    const aiUrl = findUrl((f) => f.key.endsWith(".ai"));
+    const cdrUrl = findUrl((f) => f.key.endsWith(".cdr"));
 
     // ogImageUrl — public WebP is the OG/Twitter card image
     const ogImageUrl = webpUrl || null;
@@ -980,15 +998,15 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
 
     // ── Step E: build schema JSON-LD ──────────────────────────────────────────
     const imageObjectSchema = buildImageObjectSchema({
-      imageUrl:    ogImageUrl,
-      logoName:    finalLogoName,
-      brand:       aiContent.brand,
+      imageUrl: ogImageUrl,
+      logoName: finalLogoName,
+      brand: aiContent.brand,
       canonicalUrl,
       description: aiContent.imageObjectDescription,
     });
 
     const breadcrumbSchema = buildBreadcrumbSchema({
-      brand:    aiContent.brand,
+      brand: aiContent.brand,
       logoName: finalLogoName,
       canonicalUrl,
     });
@@ -1000,17 +1018,17 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     // ── Step F: save to DB ────────────────────────────────────────────────────
     const logo = await prisma.logo.create({
       data: {
-        logoName:     finalLogoName,
-        slug:         finalSlug,
-        brand:        aiContent.brand,
-        website:      aiContent.website,
-        category:     aiContent.category,
-        industry:     aiContent.industry,
-        country:      aiContent.country,
-        license:      sharedFields.license,
-        description:  aiContent.description,
-        tags:         aiContent.tags,
-        brandColors:  sharedFields.brandColors,
+        logoName: finalLogoName,
+        slug: finalSlug,
+        brand: aiContent.brand,
+        website: aiContent.website,
+        category: aiContent.category,
+        industry: aiContent.industry,
+        country: aiContent.country,
+        license: sharedFields.license,
+        description: aiContent.description,
+        tags: aiContent.tags,
+        brandColors: sharedFields.brandColors,
         publishStatus: sharedFields.publishStatus,
         downloadCount: sharedFields.downloadCount,
         svgUrl,
@@ -1019,24 +1037,24 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
         aiUrl,
         cdrUrl,
         svgContent,
-        metaTitle:        aiContent.metaTitle,
-        metaDescription:  aiContent.metaDescription,
-        altText:          aiContent.altText,
-        svgfilesize:  formatSize(fileSizes.svg),
-        pngfilesize:  formatSize(fileSizes.png),
-        aifilesize:   formatSize(fileSizes.ai),
-        cdrfilesize:  formatSize(fileSizes.cdr),
+        metaTitle: aiContent.metaTitle,
+        metaDescription: aiContent.metaDescription,
+        altText: aiContent.altText,
+        svgfilesize: formatSize(fileSizes.svg),
+        pngfilesize: formatSize(fileSizes.png),
+        aifilesize: formatSize(fileSizes.ai),
+        cdrfilesize: formatSize(fileSizes.cdr),
 
         // ── SEO / social ────────────────────────────────────────────────────
         canonicalUrl,
-        ogTitle:            aiContent.ogTitle,
-        ogDescription:      aiContent.ogDescription,
+        ogTitle: aiContent.ogTitle,
+        ogDescription: aiContent.ogDescription,
         ogImageUrl,
-        ogType:             "website",
-        twitterTitle:       aiContent.twitterTitle,
+        ogType: "website",
+        twitterTitle: aiContent.twitterTitle,
         twitterDescription: aiContent.twitterDescription,
-        twitterImage:       ogImageUrl,
-        twitterCardType:    "summary_large_image",
+        twitterImage: ogImageUrl,
+        twitterCardType: "summary_large_image",
 
         // ── Schema JSON-LD ───────────────────────────────────────────────────
         imageObjectSchema,
@@ -1048,28 +1066,28 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     console.log(`  [db] ✓ Saved ID: ${logo.id}`);
 
     return {
-      success:      true,
-      logoName:     finalLogoName,
-      slug:         finalSlug,
+      success: true,
+      logoName: finalLogoName,
+      slug: finalSlug,
       versioned,
       originalName: rawLogoName,
-      category:     aiContent.category,
-      brand:        aiContent.brand,
-      website:      aiContent.website,
-      country:      aiContent.country,
-      industry:     aiContent.industry,
+      category: aiContent.category,
+      brand: aiContent.brand,
+      website: aiContent.website,
+      country: aiContent.country,
+      industry: aiContent.industry,
       canonicalUrl,
       ogImageUrl,
-      id:           logo.id,
+      id: logo.id,
     };
 
   } catch (err) {
     console.error(`  [error] ❌ "${rawLogoName}": ${err.message}`);
     return {
-      success:  false,
+      success: false,
       logoName: rawLogoName,
-      slug:     generateSlugFromName(rawLogoName),
-      error:    err.message,
+      slug: generateSlugFromName(rawLogoName),
+      error: err.message,
     };
   }
 }
@@ -1082,10 +1100,10 @@ export async function POST(req) {
   try {
     const formData = await req.formData();
 
-    const category      = formData.get("category")      || "";
-    const license       = formData.get("license")        || "";
-    const publishStatus = formData.get("publishStatus")  || "Draft";
-    const downloadCount = formData.get("downloadCount")  || "unlimited";
+    const category = formData.get("category") || "";
+    const license = formData.get("license") || "";
+    const publishStatus = formData.get("publishStatus") || "Draft";
+    const downloadCount = formData.get("downloadCount") || "unlimited";
 
     let brandColors = [];
     try { brandColors = JSON.parse(formData.get("brandColors") || "[]"); } catch { }
@@ -1099,8 +1117,8 @@ export async function POST(req) {
     console.log(`[1] Wrapper ZIP received: ${wrapperFile.name}`);
 
     const wrapperBuffer = Buffer.from(await wrapperFile.arrayBuffer());
-    const wrapperZip    = new AdmZip(wrapperBuffer);
-    const allEntries    = wrapperZip.getEntries();
+    const wrapperZip = new AdmZip(wrapperBuffer);
+    const allEntries = wrapperZip.getEntries();
 
     // ── Group files by top-level folder ───────────────────────────────────────
     const folderMap = new Map();
@@ -1135,12 +1153,12 @@ export async function POST(req) {
     for (const [name] of folderMap) console.log(`     - ${name}`);
 
     // ── Fetch website settings: watermark + category list ─────────────────────
-    const websiteRecord      = await prisma.website.findFirst();
-    const watermark          = websiteRecord?.watermark ?? null;
-    const availableCategories = extractCategoryNames(websiteRecord?.categories);
+    const websiteRecord = await prisma.website.findFirst();
+    const watermark = websiteRecord?.watermark ?? null;
+const availableCategories = extractCategoryNames(websiteRecord?.categories);
 
     console.log(`[3] Watermark: ${watermark?.enabled ? "ENABLED" : "DISABLED"}`);
-    console.log(`[3] Site categories (from DB): ${availableCategories.length ? availableCategories.join(", ") : "(none configured)"}`);
+   console.log(`[3] Site categories (from DB): ${availableCategories.length ? availableCategories.map(c => c.name).join(", ") : "(none configured)"}`);
 
     const sharedFields = {
       category,
@@ -1154,8 +1172,8 @@ export async function POST(req) {
     // ── Process each folder sequentially ──────────────────────────────────────
     const results = [];
     let successCount = 0;
-    let failCount    = 0;
-    let idx          = 0;
+    let failCount = 0;
+    let idx = 0;
 
     for (const [folderName, folderFiles] of folderMap) {
       idx++;
@@ -1191,7 +1209,7 @@ export async function POST(req) {
 
     return NextResponse.json({
       message: `Bulk upload complete. ${successCount} succeeded, ${failCount} failed.`,
-      total:   folderMap.size,
+      total: folderMap.size,
       successCount,
       failCount,
       results,

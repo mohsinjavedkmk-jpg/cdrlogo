@@ -14,11 +14,11 @@ const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "CDRLogo",
-  url: "https://cdrlogo.com",
+  url: "https://www.cdrlogo.com",
   description: "Logo library for educational and design reference use.",
   potentialAction: {
     "@type": "SearchAction",
-    target: "https://cdrlogo.com/search?q={search_term_string}",
+    target: "https://www.cdrlogo.com/search?q={search_term_string}",
     "query-input": "required name=search_term_string",
   },
 };
@@ -31,15 +31,17 @@ const breadcrumbSchema = {
       "@type": "ListItem",
       position: 1,
       name: "Home",
-      item: "https://cdrlogo.com",
+      item: "https://www.cdrlogo.com",
     },
   ],
 };
 
 export async function generateMetadata() {
-  const baseUrl = "https://cdrlogo.com";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.cdrlogo.com";
 
   try {
+    const cleanText = (text) =>
+      text ? text.replace(/[\r\n\t\u200B]+/g, " ").replace(/\s+/g, " ").trim() : "";
     const res = await fetch(`${baseUrl}/api/admin/site-setting`, {
       cache: "no-store",
     });
@@ -47,14 +49,15 @@ export async function generateMetadata() {
     const data = await res.json();
 
     const title =
-      data?.metaTitle ||
+      cleanText(data?.metaTitle) ||
       "Vector Logo Downloads | CDR, SVG, AI & PNG Files - CDRLogo";
 
     const description =
-      data?.metaDescription ||
+      cleanText(data?.metaDescription) ||
       "Vector logo downloads in CDR, SVG, AI, EPS and PNG formats for graphic designers, students and print professionals. Design reference library at cdrlogo.com.";
 
     const image = `${baseUrl}/og-image.jpg`;
+    console.log(JSON.stringify(data?.metaDescription));
 
     return {
       title,
@@ -63,10 +66,10 @@ export async function generateMetadata() {
       openGraph: {
         title,
         description,
-        url: baseUrl,
-        siteName: "CDRLOGO",
+        url: "https://www.cdrlogo.com",
+        siteName: "CDRLogo",
         type: "website",
-        images: [{ url: image, width: 1200, height: 630, alt: "CDRLOGO - Vector Logo Downloads" }],
+        images: [{ url: image, width: 1200, height: 630, alt: "CDRLogo - Vector Logo Downloads" }],
       },
       twitter: {
         card: "summary_large_image",
@@ -79,20 +82,20 @@ export async function generateMetadata() {
     return {
       title: "Vector Logo Downloads | CDR, SVG, AI & PNG Files - CDRLogo",
       description: "Vector logo downloads in CDR, SVG, AI, EPS and PNG formats for graphic designers, students and print professionals. Design reference library at cdrlogo.com.",
-      alternates: { canonical: "https://cdrlogo.com" },
+      alternates: { canonical: "https://www.cdrlogo.com" },
       openGraph: {
         title: "Vector Logo Downloads | CDR, SVG, AI & PNG Files - CDRLogo",
         description: "Vector logo downloads in CDR, SVG, AI, EPS and PNG formats for graphic designers, students and print professionals. Design reference library at cdrlogo.com.",
-        url: "https://cdrlogo.com",
-        siteName: "CDRLOGO",
+        url: "https://www.cdrlogo.com",
+        siteName: "CDRLogo",
         type: "website",
-        images: [{ url: "https://cdrlogo.com/og-image.jpg", width: 1200, height: 630 }],
+        images: [{ url: "https://www.cdrlogo.com/og-image.jpg", width: 1200, height: 630 }],
       },
       twitter: {
         card: "summary_large_image",
         title: "Vector Logo Downloads | CDR, SVG, AI & PNG Files - CDRLogo",
         description: "Vector logo downloads in CDR, SVG, AI, EPS and PNG formats for graphic designers, students and print professionals. Design reference library at cdrlogo.com.",
-        images: ["https://cdrlogo.com/og-image.jpg"],
+        images: ["https://www.cdrlogo.com/og-image.jpg"],
       },
     };
   }
