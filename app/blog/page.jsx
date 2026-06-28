@@ -240,7 +240,7 @@ export default function BlogPage() {
 
           <header className="page-header">
             <h1 className="page-title">Design <span className="accent">Blog</span></h1>
-            <p className="page-sub">Tips, tutorials, and insights for professional designers.</p>
+            <p className="page-sub">Explore educational articles, design guides, creative insights, and case studies covering logo design, visual identity, branding, and vector graphics. An independent learning resource created for designers, students, researchers, and creative professionals.</p>
           </header>
 
           <div className="controls">

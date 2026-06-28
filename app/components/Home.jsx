@@ -5,10 +5,10 @@ import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
 
 const popularSearches = [
-  "Technology logos",
-  "Automotive brands",
-  "Finance logos",
-  "Gaming logos",
+  "Technology Logos",
+  "Automotive Brands",
+  "Gaming Concepts",
+  "Finance Icons",
 ];
 
 const formats = [
@@ -33,18 +33,18 @@ export default function Home() {
 
 
   const handleSearch = () => {
-  const q = searchValue.trim().toLowerCase();
-  if (!q) return;
+    const q = searchValue.trim().toLowerCase();
+    if (!q) return;
 
-  const slug = q.replace(/\s+/g, "-"); // 👈 space → hyphen
+    const slug = q.replace(/\s+/g, "-"); // 👈 space → hyphen
 
-  router.push(`/search/${encodeURIComponent(slug)}`);
-};
-const handleKeyDown = (e) => {
-  if (e.key === "Enter") {
-    handleSearch();
-  }
-};
+    router.push(`/search/${encodeURIComponent(slug)}`);
+  };
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
   return (
     <>
       <style>{`
@@ -179,7 +179,7 @@ const handleKeyDown = (e) => {
         /* Heading */
         .home-heading {
           text-align: center;
-          font-size: clamp(24px, 5vw, 46px);
+          font-size: clamp(22px, 4vw, 42px);
           font-weight: 900; line-height: 1.12;
           letter-spacing: -1.2px;
           color: var(--heading);
@@ -299,26 +299,25 @@ const handleKeyDown = (e) => {
           <div className="h-2" />
           {/* Badge */}
           <div className="anim d0">
-            <div className="badge">
-              <span className="badge-dot" />
-              50,000+ Premium Logo Resources
-            </div>
+
           </div>
 
           {/* Heading */}
           <div className="anim d1">
             <h1 className="home-heading">
-              CDRLogo – Free{" "}
-              <span className="accent">Brand &amp; Template</span>
-              {" "}Vector Logos
+              CDRLogo – {" "}
+              <span className="accent">Vector Logo </span>
+              {" "}Reference Library for Designers  <span className="accent"> &amp;</span> Students
             </h1>
           </div>
 
           {/* Sub */}
           <div className="anim d2">
             <h2 className="home-sub">
-              Your free library of high-quality brand logos and creative templates.
-              Download instantly in multiple formats for any design project.
+              Explore an independent educational reference library of logo references, visual identities,
+              and branding resources for research, learning, and creative inspiration.
+              Access AI, CDR, SVG, and PNG reference files, one-click SVG codes, official website links,
+              and color information through a fast, organized platform.
             </h2>
           </div>
 
@@ -368,7 +367,7 @@ const handleKeyDown = (e) => {
                   <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                   <polyline points="17 6 23 6 23 12" />
                 </svg>
-                Popular
+                Explore
               </span>
               {popularSearches.map((tag, i) => (
                 <button

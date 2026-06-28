@@ -164,6 +164,9 @@ export default function Categories() {
           position: absolute; top: 0; left: 0; right: 0;
           height: 320px; pointer-events: none; z-index: 0;
         }
+          .accent {
+             color: #07A626;
+        }
         .bg-glow::before {
           content: '';
           position: absolute;
@@ -373,10 +376,10 @@ export default function Categories() {
 
                         {/* Header */}
                         <div className="anim d0" style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: "8px" }}>
-                            <h1 className="cat-heading">Browse Categories</h1>
+                            <h1 className="cat-heading">Browse Design Categories <span class="accent">&</span> Visual Archives</h1>
                             <p className="cat-sub">
-                                Find logos by category with our structured collection of brand and template designs.
-                                Download high-resolution vector logos in CDR, AI, SVG, and PNG formats instantly.
+                                Explore an independent educational reference library organized by 0–9 and A–Z. Browse logo categories, 
+original design concepts, and visual resources for research, learning, and creative inspiration.
                             </p>
                         </div>
 

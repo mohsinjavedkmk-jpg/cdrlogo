@@ -124,12 +124,13 @@ export default function CmsPage() {
           pointer-events: none; z-index: 0;
         }
 
-        .cms-page-inner {
-          position: relative; z-index: 1;
-          max-width: 760px;
-          margin: 0 auto;
-          padding: 48px 24px 96px;
-        }
+.cms-page-inner {
+  position: relative; z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  width: 100%;
+}
 
         /* Back button */
         .back-btn {
@@ -189,15 +190,26 @@ export default function CmsPage() {
         }
 
         /* ── Rich content styles ── */
-        .cms-body {
-          font-family: 'DM Sans', sans-serif;
-          font-size: 15px;
-          line-height: 1.82;
-          color: var(--body);
-          transition: color 0.35s;
-        }
+       .cms-body {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.82;
+  color: var(--body);
+  transition: color 0.35s;
+  width: 100vw;
+  max-width: 100vw;
+  height: auto;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  padding: 0 24px;
+}
 
-        .cms-body > * + * { margin-top: 1em; }
+.cms-body > * {
+  height: auto;
+}
 
         .cms-body h1 {
           font-family: 'Sora', sans-serif;
@@ -408,20 +420,7 @@ export default function CmsPage() {
           {/* Content */}
           {!loading && page && (
             <>
-              <div className="cms-page-header">
-             
-                <h1 className="cms-page-title">{page.title}</h1>
-                <div className="cms-page-meta">
-                  <span>/{page.slug}</span>
-                  <span className="cms-page-meta-dot" />
-                  <span>
-                    Updated{" "}
-                    {new Date(page.updatedAt).toLocaleDateString("en-US", {
-                      month: "long", day: "numeric", year: "numeric",
-                    })}
-                  </span>
-                </div>
-              </div>
+            
 
               {/* HTML content from Tiptap */}
               <div

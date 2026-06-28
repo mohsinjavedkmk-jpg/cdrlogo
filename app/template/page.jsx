@@ -405,20 +405,16 @@ export default function TemplatesPage() {
           {/* Hero */}
           <section className="brands-hero">
           
-            <div className="hero-badge">
-              <span className="badge-dot" />
-              Logo Templates Collection
-            </div>
+            
 
             <h1 className="hero-title">
-              Logo Templates Collection –{" "}
-              <span className="accent">Download Creative</span>{" "}
-              Vector Designs
+             Creative Logo Concept 
+              <span className="accent"> & </span>{" "}
+          Template Library
             </h1>
 
             <p className="hero-sub">
-              Browse a wide range of professional logo templates and download editable vector files in CDR, AI, SVG, and
-              PNG formats. Perfect for business, branding, and design projects.
+             Explore an independent educational library of original logo concepts, design templates, and creative experiments organized for research, learning, and visual inspiration. Access editable AI, CDR, SVG, and PNG reference files, raw SVG source codes, and precise color mapping for typography and layout studies.
             </p>
 
             <div className="fmt-row">

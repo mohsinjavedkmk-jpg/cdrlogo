@@ -389,7 +389,7 @@ useEffect(() => {
         <div className="page-header">
           <div>
             <h1 className="page-title">All Logos</h1>
-            <p className="page-subtitle">Browse our complete collection</p>
+            <p className="page-subtitle">Browse our educational reference catalog</p>
           </div>
           {/* <div className="sort-group">
               {SORT_OPTIONS.map(s => (

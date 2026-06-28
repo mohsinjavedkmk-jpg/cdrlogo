@@ -406,20 +406,16 @@ export default function BrandsPage() {
           {/* Hero */}
           <section className="brands-hero">
             <div className="h-10"/>
-            <div className="hero-badge">
-              <span className="badge-dot" />
-              Brand Logos Collection
-            </div>
+           
 
             <h1 className="hero-title">
-              Brand Logos Collection –{" "}
-              <span className="accent">Download High&#8209;Quality</span>{" "}
-              Vector Logos
+              Brand Logo {" "}
+              <span className="accent">Reference Library</span>{" "}
+            
             </h1>
 
             <p className="hero-sub">
-              Explore a curated collection of global brand logos available in CDR, AI, SVG &amp; PNG formats.
-              Find and download clean, high-resolution logo files instantly for your design needs.
+             Explore an independent educational library of brand logo references organized for research, learning, and creative inspiration. Access AI, CDR, SVG, and PNG reference files, one-click SVG source codes, official website links, and precise color mapping through a fast, structured platform.
             </p>
 
             <div className="fmt-row">

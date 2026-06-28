@@ -32,7 +32,7 @@ const QUICK_LINKS = [
     { label: "Request Logo", href: "/request" },
     { label: "Brands", href: "/brands" },
     { label: "Template", href: "/template" },
-    { label: "Sitemap", href: "/sitemap.xml" },
+    { label: "Sitemap", href: "https://www.cdrlogo.com/sitemap.xml" },
 ];
 
 export default function Footer() {
@@ -396,7 +396,7 @@ export default function Footer() {
                                 {footer.description ||
                                     "Your free library of high-quality brand logos and creative templates."}
                             </p>
-                            <div className="f-socials">
+                            {/* <div className="f-socials">
                                 {["twitter", "facebook", "instagram", "pinterest"].map((platform) =>
                                     footer[platform] ? (
                                         <a
@@ -411,7 +411,7 @@ export default function Footer() {
                                         </a>
                                     ) : null
                                 )}
-                            </div>
+                            </div> */}
                         </div>
 
                         {/* Pages */}
@@ -471,27 +471,13 @@ export default function Footer() {
                     {/* ── Gradient divider ── */}
                     <div className="f-divider" />
 
-                    {/* ── Stats strip ── */}
-                    <div className="f-stats">
-                        {[
-                            { val: "50K+", accent: true, lbl: "Logo Resources" },
-                            { val: "120+", lbl: "Brand Categories" },
-                            { val: "Free", accent: true, lbl: "Always & Forever" },
-                            { val: "Daily", lbl: "New Uploads" },
-                        ].map(({ val, accent, lbl }) => (
-                            <div className="f-stat" key={lbl}>
-                                <span className="f-stat-val">
-                                    {accent ? <span className="f-stat-accent">{val}</span> : val}
-                                </span>
-                                <span className="f-stat-lbl">{lbl}</span>
-                            </div>
-                        ))}
-                    </div>
+                   
 
                     {/* ── Bottom bar ── */}
                     <div className="cdr-footer-bottom">
                         <span className="f-copyright">
-                            {footer.copyright || "© 2026 CDRLOGO.com. All rights reserved."}
+                          {/* footer.copyright */}
+                             © 2026 CDRLOGO.com. All rights reserved.
                         </span>
                         <div className="f-bottom-right">
                           

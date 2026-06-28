@@ -188,7 +188,7 @@ export default function TemplateCategories() {
         <div className="tc-container">
           <div className="tc-header">
             <h2 className="tc-title">Template Categories</h2>
-            <p className="tc-subtitle">Ready-made logo templates for your projects</p>
+            <p className="tc-subtitle">Original logo concepts optimized for visual study</p>
           </div>
           {error ? (
             <div className="tc-error">Failed to load categories.</div>

@@ -208,7 +208,7 @@ export default function TrendingLogos() {
         <div className="tl-container">
           <div className="tl-header">
             <h2 className="tl-title">Trending Logos</h2>
-            <p className="tl-subtitle">Most downloaded this week</p>
+            <p className="tl-subtitle">Recently updated vector assets</p>
           </div>
 
           {error ? (

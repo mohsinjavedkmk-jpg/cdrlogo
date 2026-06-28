@@ -151,8 +151,8 @@ export default function TopBrands() {
       <section className="tb-section">
         <div className="tb-container">
           <div className="tb-header">
-            <h2 className="tb-title">Top Brands</h2>
-            <p className="tb-subtitle">Popular brand logos available for download</p>
+            <h2 className="tb-title">Featured Brand References</h2>
+            <p className="tb-subtitle">Independent vector archives of global corporate identity marks for design learning and educational study.</p>
           </div>
           <div className="tb-grid">
             {TOP_BRANDS.map(brand => (
