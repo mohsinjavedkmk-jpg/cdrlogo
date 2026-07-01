@@ -527,6 +527,24 @@ Elevate your brand
 Industry leader
 Trusted worldwide
 Modern branding
+High Resolution
+Free Download
+High Quality
+High Resolution
+Best Logo
+Premium
+Amazing
+Beautiful
+Professional Design
+Modern red/blue/green (or any color/style description)
+Click here
+Download now
+100% free
+No copyright
+HD logo
+World best
+Top quality
+Marketing/promotional language of any kind
 Cutting-edge
 Innovative
 Stunning
@@ -568,7 +586,11 @@ Return ONLY VALID JSON.
 
 No markdown.
 No explanations.
-No commentary.`;
+No commentary.
+
+Note: main_description has ADDITIONAL banned words beyond this global list
+— see the "MAIN_DESCRIPTION — ABSOLUTE BANNED WORDS" section in the user
+prompt. Both lists apply simultaneously.`;
 
   // ── User prompt (identical to single-upload) ──────────────────────────────
   const userPrompt = `Generate complete SEO metadata for this logo page.
@@ -648,14 +670,102 @@ Must contain AT LEAST ONE EXACT PHRASE:
 STRICTLY FORBIDDEN: commercial projects, business use, branding needs, marketing language
 
 --------------------------------------------------
-main_description (45–100 words)
---------------------------------------------------
+⚠️ MAIN_DESCRIPTION — ABSOLUTE BANNED WORDS (HIGHEST PRIORITY)
+==================================================
 
-Sentence 1 MUST mention: PNG OR SVG OR Vector.
-Must naturally include ALL: vector format, high resolution.
-Must contain: "educational use" OR "reference use".
-Cover: brand background, industry, company context, available formats (PNG, SVG, AI, CDR).
-STRICTLY FORBIDDEN: Free, Download, marketing language, color/style descriptions.
+STYLE ASSIGNMENT FOR THIS LOGO MAIN_DESCRIPTION  — MANDATORY
+==================================================
+
+This logo has been externally assigned: STYLE ${forcedStyle}
+
+This assignment is NOT your choice — it was randomly generated in code to
+guarantee stylistic variation across the entire site. You MUST write
+main_description using STYLE ${forcedStyle} below. Do NOT use any other
+style. Do NOT blend multiple styles together. Do NOT default to the style
+that "feels most natural" — use STYLE ${forcedStyle}, exactly as described.
+
+STYLE A — Format-first:
+Start with the file formats as the subject.
+Example: "PNG, SVG, AI, and CDR files of the [Logo Name]
+are archived here as scalable vector assets for reference use."
+
+STYLE B — Brand-first (requires confirmed brand, industry, AND country):
+Start with the brand as the subject.
+Example: "[Brand], a [industry] company from [country],
+is represented here through its [Logo Name], archived
+in PNG, SVG, AI, and CDR scalable vector formats."
+
+STYLE C — Archive-purpose-first:
+Start with the archive purpose as the subject.
+Example: "This entry documents the [Logo Name] for
+research and educational reference, available in PNG,
+SVG, AI, and CDR vector file formats."
+
+STYLE D — Industry-context-first (requires confirmed industry AND country):
+Start with the industry as the subject.
+Example: "Within the [industry] sector, the [Logo Name]
+is preserved here as scalable vector artwork in PNG,
+SVG, AI, and CDR formats for educational study."
+
+FALLBACK RULE (applies ONLY if the assigned style is STYLE B or STYLE D):
+STYLE B and STYLE D require a confidently identified brand, industry, AND
+country for THIS specific logo. If you cannot confidently identify these,
+fall back to STYLE A instead. Do NOT fabricate brand, industry, or country
+details just to force-fit STYLE ${forcedStyle}.
+
+REGARDLESS OF STYLE:
+1. Never reuse the same paragraph structure or sentence order as any
+   previous page for this logo (see PREVIOUS PAGES above, if applicable).
+2. Do not swap synonyms (presented/features/offers/provides) while keeping
+   the same sentence skeleton — that still counts as a repeated template.
+3. Vary WHERE brand context, format list, and educational phrase appear
+   within the sentence.
+
+==================================================
+
+The following words/phrases are BANNED from main_description with ZERO
+exceptions. This rule overrides every other instruction in this prompt,
+including style, tone, and word-count guidance. If a banned word would
+naturally fit the sentence, REWRITE the sentence instead of using it.
+
+BANNED LIST:
+Free Download, High Quality, High Resolution, Best Logo, Premium,
+Amazing, Beautiful, Professional Design, Modern red/blue/green
+(or any color/style description), Click here, Download now,
+100% free, No copyright, HD logo, World best, Top quality,
+Marketing/promotional language of any kind.
+
+SELF-CHECK BEFORE RETURNING main_description:
+Re-read the sentence you wrote. If ANY word above appears — even as
+part of a larger phrase, even with different capitalization — DELETE
+it and rewrite that sentence completely. Do not just swap the banned
+word for a synonym while keeping the same sentence structure.
+
+Must naturally contain ONE of:
+
+* vector format
+* scalable vector
+* vector artwork
+* vector assets
+* vector files
+
+Must naturally contain ONE of:
+
+* educational use
+* reference use
+* archival reference
+* design study
+* research reference
+
+Cover:
+
+* brand background (if known)
+* industry (if known)
+* available formats (PNG, SVG, AI, CDR)
+
+Word count:
+45–100 words.
+
 
 --------------------------------------------------
 alt_text (LOCKED FORMAT)
@@ -733,91 +843,6 @@ FINAL OUTPUT FIELDS
 
 brand_used, website_used, industry_used, country_used
 ===========================================
-Important instructions:
-
-==================================================
-STYLE ASSIGNMENT FOR THIS LOGO — MANDATORY
-==================================================
-
-This logo has been externally assigned: STYLE ${forcedStyle}
-
-This assignment is NOT your choice — it was randomly generated in code to
-guarantee stylistic variation across the entire site. You MUST write
-main_description using STYLE ${forcedStyle} below. Do NOT use any other
-style. Do NOT blend multiple styles together. Do NOT default to the style
-that "feels most natural" — use STYLE ${forcedStyle}, exactly as described.
-
-STYLE A — Format-first:
-Start with the file formats as the subject.
-Example: "PNG, SVG, AI, and CDR files of the [Logo Name]
-are archived here as scalable vector assets for reference use."
-
-STYLE B — Brand-first (requires confirmed brand, industry, AND country):
-Start with the brand as the subject.
-Example: "[Brand], a [industry] company from [country],
-is represented here through its [Logo Name], archived
-in PNG, SVG, AI, and CDR scalable vector formats."
-
-STYLE C — Archive-purpose-first:
-Start with the archive purpose as the subject.
-Example: "This entry documents the [Logo Name] for
-research and educational reference, available in PNG,
-SVG, AI, and CDR vector file formats."
-
-STYLE D — Industry-context-first (requires confirmed industry AND country):
-Start with the industry as the subject.
-Example: "Within the [industry] sector, the [Logo Name]
-is preserved here as scalable vector artwork in PNG,
-SVG, AI, and CDR formats for educational study."
-
-FALLBACK RULE (applies ONLY if the assigned style is STYLE B or STYLE D):
-STYLE B and STYLE D require a confidently identified brand, industry, AND
-country for THIS specific logo. If you cannot confidently identify these,
-fall back to STYLE A instead. Do NOT fabricate brand, industry, or country
-details just to force-fit STYLE ${forcedStyle}.
-
-REGARDLESS OF STYLE:
-1. Never reuse the same paragraph structure or sentence order as any
-   previous page for this logo (see PREVIOUS PAGES above, if applicable).
-2. Do not swap synonyms (presented/features/offers/provides) while keeping
-   the same sentence skeleton — that still counts as a repeated template.
-3. Vary WHERE brand context, format list, and educational phrase appear
-   within the sentence.
-
-STRICTLY FORBIDDEN in main_description:
-Free Download, High Quality, High Resolution, Best Logo,
-Premium, Amazing, Beautiful, Professional Design,
-Marketing/promotional language, Modern red/blue/green
-style descriptions, Click here, Download now, 100% free,
-No copyright, HD logo, World best, Top quality,
-color/style descriptions.
-
-Must naturally contain ONE of:
-
-* vector format
-* scalable vector
-* vector artwork
-* vector assets
-* vector files
-
-Must naturally contain ONE of:
-
-* educational use
-* reference use
-* archival reference
-* design study
-* research reference
-
-Cover:
-
-* brand background (if known)
-* industry (if known)
-* available formats (PNG, SVG, AI, CDR)
-
-Word count:
-45–100 words.
-
-
 ==================================================
 FINAL SELF VALIDATION
 ==================================================
