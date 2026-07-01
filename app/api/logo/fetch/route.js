@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "../../../lib/prisma"
-import { SlashSquare } from "lucide-react";
+import { prisma } from "../../../lib/prisma";
+
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -13,13 +13,6 @@ export async function POST(req) {
     if (letter && letter !== "all" && letter !== "0-9") {
       where.logoName = {
         startsWith: letter,
-        mode: "insensitive"
-      };
-    }
-
-    if (category && category !== "all") {
-      where.category = {
-        equals: category,
         mode: "insensitive",
       };
     }
@@ -29,16 +22,24 @@ export async function POST(req) {
       select: {
         id:          true,
         logoName:    true,
-        category:    true,
+        category:    true, // String[]
         brandColors: true,
         webpUrl:     true,
         slug:        true,
       },
     });
 
-    // 0-9 can't be done in Prisma startsWith, so filter after fetch
+    // 0-9 filter (can't do in Prisma startsWith)
     if (letter === "0-9") {
       logos = logos.filter(l => /^[0-9]/.test(l.logoName));
+    }
+
+    // category is a String[], so filter case-insensitively in JS
+    if (category && category !== "all") {
+      logos = logos.filter(l =>
+        Array.isArray(l.category) &&
+        l.category.some(c => c.toLowerCase().trim() === category)
+      );
     }
 
     return NextResponse.json({ logos });

@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 
+const PER_PAGE = 8; // change to 10 if you prefer
+
 function BrandCard({ cat, index, dark }) {
   const router  = useRouter();
   const [hov, setHov] = useState(false);
@@ -56,24 +58,53 @@ export default function BrandCategories() {
   const [cats,    setCats]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
+  const [page,    setPage]    = useState(1);
 
   useEffect(() => {
     fetch("/api/catageory/brand")
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(data => {
-        // sort by count descending
         console.log("Fetched categories:", data.categories);
-      const formatted = (data.categories ?? []).map(obj => {
-  const [category, count] = Object.entries(obj)[0];
-  return { category, count };
-});
+        const formatted = (data.categories ?? []).map(obj => {
+          const [category, count] = Object.entries(obj)[0];
+          return { category, count };
+        });
 
-const sorted = formatted.sort((a, b) => b.count - a.count);
+        const sorted = formatted.sort((a, b) => b.count - a.count);
         setCats(sorted);
         setLoading(false);
       })
       .catch(err => { setError(String(err)); setLoading(false); });
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(cats.length / PER_PAGE));
+  const start = (page - 1) * PER_PAGE;
+  const pageCats = cats.slice(start, start + PER_PAGE);
+
+  const goToPage = (p) => {
+    const clamped = Math.min(Math.max(1, p), totalPages);
+    setPage(clamped);
+    // scroll the section into view smoothly when paging
+    document.getElementById("bc-section-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // build a compact page list e.g. 1 2 3 ... 8
+  const getPageNumbers = () => {
+    const pages = [];
+    const windowSize = 1;
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= page - windowSize && i <= page + windowSize)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+    return pages;
+  };
 
   return (
     <>
@@ -88,6 +119,7 @@ const sorted = formatted.sort((a, b) => b.count - a.count);
           --bc-name:#e0e0f0;--bc-count:rgba(255,255,255,0.35);
           --bc-icon-bg:rgba(7,166,38,0.12);--bc-icon-border:rgba(7,166,38,0.22);--bc-icon-color:#4ade80;
           --bc-sk:rgba(255,255,255,0.07);
+          --bc-page-bg:#111118;--bc-page-border:rgba(255,255,255,0.1);--bc-page-text:rgba(255,255,255,0.55);
         }
         [data-theme="light"]{
           --bc-bg:#f4f4f8;--bc-surface:#ffffff;
@@ -96,6 +128,7 @@ const sorted = formatted.sort((a, b) => b.count - a.count);
           --bc-name:#111120;--bc-count:rgba(0,0,0,0.42);
           --bc-icon-bg:rgba(7,166,38,0.08);--bc-icon-border:rgba(7,166,38,0.18);--bc-icon-color:#07A626;
           --bc-sk:rgba(0,0,0,0.07);
+          --bc-page-bg:#ffffff;--bc-page-border:rgba(0,0,0,0.1);--bc-page-text:rgba(0,0,0,0.55);
         }
 
         .bc-section{background:var(--bc-bg);font-family:'Sora',sans-serif;padding:48px 0 56px;transition:background .35s}
@@ -142,12 +175,27 @@ const sorted = formatted.sort((a, b) => b.count - a.count);
 
         .bc-error{text-align:center;padding:40px;color:#f87171;font-size:13px}
 
+        /* pagination */
+        .bc-pagination{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:32px;font-family:'DM Sans',sans-serif}
+        .bc-page-btn{
+          min-width:34px;height:34px;padding:0 8px;border-radius:8px;
+          background:var(--bc-page-bg);border:1px solid var(--bc-page-border);
+          color:var(--bc-page-text);font-size:13px;font-weight:600;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;
+          transition:background .18s,border-color .18s,color .18s,transform .18s;
+        }
+        .bc-page-btn:hover:not(:disabled){background:rgba(7,166,38,0.1);border-color:rgba(7,166,38,0.35);color:#4ade80}
+        [data-theme="light"] .bc-page-btn:hover:not(:disabled){background:rgba(7,166,38,0.08);border-color:rgba(7,166,38,0.3);color:#07A626}
+        .bc-page-btn:disabled{opacity:.35;cursor:not-allowed}
+        .bc-page-btn--active{background:#07A626!important;border-color:#07A626!important;color:#fff!important}
+        .bc-page-ellipsis{color:var(--bc-page-text);font-size:13px;padding:0 4px;user-select:none}
+
         @media(max-width:1100px){.bc-grid{grid-template-columns:repeat(4,1fr)}}
         @media(max-width:820px){.bc-grid{grid-template-columns:repeat(3,1fr);gap:10px}.bc-card{padding:16px 14px}.bc-icon{width:40px;height:40px;margin-bottom:20px}.bc-name{font-size:13px}}
         @media(max-width:520px){.bc-grid{grid-template-columns:repeat(2,1fr);gap:8px}.bc-container{padding:0 14px}.bc-title{font-size:20px}}
       `}</style>
 
-      <section className="bc-section">
+      <section className="bc-section" id="bc-section-top">
         <div className="bc-container">
           <div className="bc-header">
             <h2 className="bc-title">Brand Categories</h2>
@@ -156,12 +204,50 @@ const sorted = formatted.sort((a, b) => b.count - a.count);
           {error ? (
             <div className="bc-error">Failed to load categories.</div>
           ) : (
-            <div className="bc-grid">
-              {loading
-                ? Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)
-                : cats.map((cat, i) => <BrandCard key={cat.category} cat={cat} index={i} dark={dark} />)
-              }
-            </div>
+            <>
+              <div className="bc-grid">
+                {loading
+                  ? Array.from({ length: PER_PAGE }).map((_, i) => <SkeletonCard key={i} />)
+                  : pageCats.map((cat, i) => <BrandCard key={cat.category} cat={cat} index={i} dark={dark} />)
+                }
+              </div>
+
+              {!loading && totalPages > 1 && (
+                <div className="bc-pagination">
+                  <button
+                    className="bc-page-btn"
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page === 1}
+                    aria-label="Previous page"
+                  >
+                    ‹
+                  </button>
+
+                  {getPageNumbers().map((p, i) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${i}`} className="bc-page-ellipsis">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        className={`bc-page-btn${p === page ? " bc-page-btn--active" : ""}`}
+                        onClick={() => goToPage(p)}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+
+                  <button
+                    className="bc-page-btn"
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page === totalPages}
+                    aria-label="Next page"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

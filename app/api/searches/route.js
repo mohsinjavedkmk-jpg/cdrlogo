@@ -2,21 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 
 function normalize(str = "") {
-  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return String(str).toLowerCase().trim();
 }
 
-// simple fuzzy match (substring + partial similarity)
-function isMatch(query, target) {
-  const q = normalize(query);
-  const t = normalize(target);
+// split into normalized alphanumeric words
+function toWords(str = "") {
+  return normalize(str)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
 
-  if (!t) return false;
-
-  return (
-    t.includes(q) ||          // direct substring match
-    q.includes(t) ||          // reverse match
-    levenshtein(q, t) <= 2    // typo tolerance
-  );
+// dynamic typo tolerance: stricter for short words, looser for long ones
+function threshold(len) {
+  if (len <= 3) return 0;   // no fuzz on tiny words, avoid false positives
+  if (len <= 5) return 1;
+  return 2;
 }
 
 // lightweight levenshtein (no libs)
@@ -43,6 +43,23 @@ function levenshtein(a, b) {
   return matrix[b.length][a.length];
 }
 
+// word-level fuzzy match: query word vs single target word
+function wordMatch(q, w) {
+  if (!w) return false;
+  if (w.includes(q) || q.includes(w)) return true;
+  return levenshtein(q, w) <= threshold(Math.max(q.length, w.length));
+}
+
+// query can be multi-word ("drgn logo") — every query word must
+// fuzzy-match at least one word in the target
+function isMatch(query, target) {
+  const qWords = toWords(query);
+  const tWords = toWords(target);
+  if (qWords.length === 0 || tWords.length === 0) return false;
+
+  return qWords.every((qw) => tWords.some((tw) => wordMatch(qw, tw)));
+}
+
 // tags is stored as Json, expected shape: ["graphics", "fashion"]
 // guard against null / bad data / non-string entries from older rows
 function toTagArray(tags) {
@@ -57,7 +74,6 @@ function isTagMatch(query, tags) {
 
 export async function POST(req) {
   try {
-
     const { query } = await req.json();
 
     if (!query) {

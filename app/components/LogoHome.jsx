@@ -1,6 +1,3 @@
-
-
-
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -156,23 +153,25 @@ export default function LogosPage() {
   // Reset to page 1 when sort changes (don't refetch — data already in memory)
   useEffect(() => { setPage(1); }, [sort]);
 
-// const [categories, setCategories] = useState(["All"]);
-// useEffect(() => {
-//   const fetchCategories = async () => {
-//     try {
-//       const res = await fetch("/api/catageory/home");
-//       const data = await res.json();
+  const [categories, setCategories] = useState(["All"]);
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("/api/catageory/home-list");
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data = await res.json();
 
-//       if (data?.success) {
-//         setCategories(["All", ...data.data]);
-//       }
-//     } catch (err) {
-//       console.error("Failed to load categories", err);
-//     }
-//   };
+        // API returns { categories: ["fashion", "sports", ...] }
+        const list = Array.isArray(data.categories) ? data.categories : [];
+        setCategories(["All", ...list]);
+      } catch (err) {
+        console.error("Failed to load categories", err);
+        setCategories(["All"]); // fallback so the UI doesn't break
+      }
+    };
 
-//   fetchCategories();
-// }, []);
+    fetchCategories();
+  }, []);
 
   return (<>
     <style>{`
@@ -410,13 +409,15 @@ export default function LogosPage() {
           ))}
         </div>
 
-        {/* <div className="cat-row">
+        <div className="cat-row">
           {categories.map(c => (
             <button key={c}
               className={`cat-btn${activeCategory === c ? " active" : ""}`}
-              onClick={() => setActiveCat(c)}>{c}</button>
+              onClick={() => setActiveCat(c)}>
+              {c === "All" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
+            </button>
           ))}
-        </div> */}
+        </div>
 
         {error ? (
           <div className="error-state">
