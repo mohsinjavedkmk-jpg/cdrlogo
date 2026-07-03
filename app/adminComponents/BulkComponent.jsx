@@ -26,6 +26,7 @@ export default function BulkUploadLogo({ dark }) {
   // ── Categories (live from API) ────────────────────────────────
   const [categories, setCategories] = useState([]);
   const [isTemplate, setIsTemplate] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
