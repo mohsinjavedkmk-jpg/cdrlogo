@@ -1,6 +1,6 @@
 /** @type {import('next-sitemap').IConfig} */
 module.exports = {
-  siteUrl: process.env.SITE_URL || "http://localhost:3000" || "https://cdrlogo.com",
+  siteUrl: process.env.SITE_URL || "http://localhost:3000" || "https://www.cdrlogo.com",
   generateRobotsTxt: true,
   changefreq: "weekly",
   priority: 0.7,
