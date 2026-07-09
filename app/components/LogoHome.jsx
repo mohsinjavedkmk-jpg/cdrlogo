@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useTheme } from "../context/ThemeContext";
 
 const ALPHABET = ["All", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
   "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0-9"];
@@ -17,26 +16,6 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 12;
 
-// Generate a gradient bg from brand colors, fallback to dark slate
-function gradientFromColors(colors, dark) {
-  if (colors?.length >= 2) {
-    return {
-      bgFrom: dark ? colors[0] : `${colors[0]}22`,
-      bgTo: dark ? colors[1] : `${colors[1]}22`,
-    };
-  }
-
-  if (colors?.length === 1) {
-    return {
-      bgFrom: dark ? colors[0] : `${colors[0]}22`,
-      bgTo: dark ? "#0f1221" : "#f8fafc",
-    };
-  }
-
-  return dark
-    ? { bgFrom: "#1a1f3a", bgTo: "#0f1221" }
-    : { bgFrom: "#f1f5f9", bgTo: "#e2e8f0" };
-}
 
 function SkeletonCard() {
   return (
@@ -54,10 +33,11 @@ function SkeletonCard() {
   );
 }
 
-function LogoCard({ logo, dark }) {
+function LogoCard({ logo }) {
   const [imgErr, setImgErr] = useState(false);
   const router = useRouter();
-  const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
+  // backend returns brandColors (array) and webpUrl
+  const colors = Array.isArray(logo.brandColors) ? logo.brandColors : [];
   const formats = ["SVG", "PNG", "AI", "CDR"]; // static — backend doesn't return formats
 
   return (
@@ -76,10 +56,7 @@ function LogoCard({ logo, dark }) {
         </div>
       )}
 
-      <div
-        className="card-image"
-        style={{ background: `linear-gradient(145deg, ${bgFrom}, ${bgTo})` }}
-      >
+      <div className="card-image">
         {!imgErr && logo.webpUrl ? (
           <img src={logo.webpUrl} alt={logo.logoName}
             onError={() => setImgErr(true)} className="card-img"
@@ -88,7 +65,7 @@ function LogoCard({ logo, dark }) {
 
           />
         ) : (
-          <span className="card-brand-name">{logo.logoName}</span>
+          <span className="card-initials">{logo.logoName?.slice(0, 2).toUpperCase()}</span>
         )}
       </div>
 
@@ -96,7 +73,7 @@ function LogoCard({ logo, dark }) {
         <div className="card-name">{logo.logoName}</div>
         <span className="card-category">{logo.category[1] ? logo.category[1] : logo.category[0]}</span>
 
-
+      
 
         <div className="card-formats">
           {formats.map(f => (
@@ -109,7 +86,6 @@ function LogoCard({ logo, dark }) {
 }
 
 export default function LogosPage() {
-  const { dark } = useTheme();
 
   const [logos, setLogos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -180,6 +156,7 @@ export default function LogosPage() {
           --sort-color:     rgba(255,255,255,0.5);
           --sort-active-bg: rgba(255,255,255,0.1);
           --sort-active-color: #fff;
+          --card-img-bg:    #1a1a24;
           --skeleton:       rgba(255,255,255,0.06);
           --page-btn-bg:    rgba(255,255,255,0.06);
           --page-btn-color: rgba(255,255,255,0.5);
@@ -209,6 +186,7 @@ export default function LogosPage() {
           --sort-color:     rgba(0,0,0,0.5);
           --sort-active-bg: rgba(0,0,0,0.08);
           --sort-active-color: #0a0a14;
+          --card-img-bg:    #f0f0f5;
           --skeleton:       rgba(0,0,0,0.06);
           --page-btn-bg:    rgba(0,0,0,0.05);
           --page-btn-color: rgba(0,0,0,0.5);
@@ -297,18 +275,12 @@ export default function LogosPage() {
         }
 
         .card-image {
-          position: relative;
-          width: 100%; height: 160px;
+          width: 100%; height: 130px; background: var(--card-img-bg);
           display: flex; align-items: center; justify-content: center;
-          overflow: hidden;
+          overflow: hidden; transition: background 0.3s;
         }
-        .card-img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
-        .card-brand-name {
-          font-size: clamp(16px,2.2vw,24px); font-weight: 900;
-          color: rgba(255,255,255,.82); letter-spacing: -1px; text-align: center;
-          padding: 0 12px; line-height: 1.1; text-shadow: 0 2px 16px rgba(0,0,0,.4);
-          user-select: none;
-        }
+        .card-img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+        .card-initials { font-size: 30px; font-weight: 900; color: var(--text-secondary); letter-spacing: -1px; font-family: 'Sora', sans-serif; }
 
         .card-body { padding: 10px 12px 12px; }
         .card-name { font-size: 15px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.3px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: color 0.3s; }
@@ -327,7 +299,7 @@ export default function LogosPage() {
         [data-theme="light"] .fmt-png { color:#1e40af; }
 
         .skeleton-card { pointer-events: none; }
-        .skeleton-img { width: 100%; height: 160px; background: var(--skeleton); animation: shimmer 1.6s infinite linear; }
+        .skeleton-img { width: 100%; height: 130px; background: var(--skeleton); animation: shimmer 1.6s infinite linear; }
         .skeleton-line { height: 10px; border-radius: 5px; background: var(--skeleton); animation: shimmer 1.6s infinite linear; }
         .w60{width:60%} .w40{width:40%} .mt4{margin-top:4px}
         .skeleton-badge { width:28px; height:16px; border-radius:4px; background:var(--skeleton); animation:shimmer 1.6s infinite linear; }
@@ -359,7 +331,7 @@ export default function LogosPage() {
           .cat-row::-webkit-scrollbar { display: none; }
           .cat-btn { flex-shrink: 0; font-size: 11.5px; padding: 4px 12px; }
           .logos-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 24px; }
-          .card-image { height: 130px; }
+          .card-image { height: 105px; }
           .card-name { font-size: 13px; }
           .card-formats { gap: 3px; }
           .pagination { gap: 4px; }
@@ -415,7 +387,7 @@ export default function LogosPage() {
               ? Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
               : logos.length === 0
                 ? <div className="empty-state">No logos found for this filter.</div>
-                : logos.map(logo => <LogoCard key={logo.id} logo={logo} dark={dark} />)
+                : logos.map(logo => <LogoCard key={logo.id} logo={logo} />)
             }
           </div>
         )}

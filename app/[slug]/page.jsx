@@ -9,6 +9,7 @@ const DEFAULT_DESCRIPTION =
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
+  console.log(slug);
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.cdrlogo.com";
 
   try {
@@ -31,9 +32,10 @@ export async function generateMetadata({ params }) {
       cleanText(page?.metaDescription) ||
       cleanText(page?.excerpt) ||
       DEFAULT_DESCRIPTION;
-
+    console.log(slug, "slug")
     const canonical = `${baseUrl}/${slug}`;
-    const image = page?.ogImage || `${baseUrl}/og-image.jpg`;
+    console.log(canonical, "canonical")
+    const image = `${baseUrl}/og-image.jpg`;
 
     return {
       title,
@@ -71,5 +73,5 @@ export async function generateMetadata({ params }) {
 }
 
 export default function Page() {
-  return <Client/>;
+  return <Client />;
 }
