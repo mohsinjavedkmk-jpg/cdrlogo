@@ -5,7 +5,7 @@ function normalize(str = "") {
   return String(str).toLowerCase().trim();
 }
 
-// ── Levenshtein (kept ONLY for category — the lowest priority tier) ──────────
+// ── Levenshtein — used for fuzzy name matching (typo tolerance) ─────────────
 function levenshtein(a, b) {
   const matrix = Array.from({ length: b.length + 1 }, () => []);
   for (let i = 0; i <= b.length; i++) matrix[i][0] = i;
@@ -20,17 +20,6 @@ function levenshtein(a, b) {
   return matrix[b.length][a.length];
 }
 
-// Only used for category fuzz — strict: only long queries (6+ chars) get
-// a tiny amount of typo tolerance, and only against whole-word category values.
-function fuzzyCategoryMatch(query, category) {
-  const q = normalize(query);
-  if (q.length < 6) return false; // short queries never fuzz — avoids false positives
-  const c = normalize(category);
-  if (!c) return false;
-  return levenshtein(q, c) <= 1; // max 1 typo, whole-string compare only
-}
-
-// ── Exact / substring matches (used for title, tags) — NO fuzz, NO tiny-word bugs ──
 function exactMatch(query, target) {
   return normalize(target) === normalize(query);
 }
@@ -39,17 +28,25 @@ function substringMatch(query, target) {
   const q = normalize(query);
   const t = normalize(target);
   if (!q || !t) return false;
-  return t.includes(q); // target must contain the FULL query — not the reverse
+  return t.includes(q); // target must contain the FULL query
 }
 
-function toTagArray(tags) {
-  if (!Array.isArray(tags)) return [];
-  return tags.filter((t) => typeof t === "string");
-}
+// Fuzzy match against the logo name — typo tolerance scales with query length
+// so short queries ("hp", "bp") never fuzz into unrelated names.
+function fuzzyNameMatch(query, name) {
+  const q = normalize(query);
+  const n = normalize(name);
+  if (!q || !n) return false;
+  if (q.length < 4) return false; // too short to safely fuzz
 
-function toCategoryArray(category) {
-  if (!Array.isArray(category)) return [];
-  return category.filter((c) => typeof c === "string");
+  const maxDistance = q.length >= 8 ? 2 : 1;
+
+  // Compare against the full name, and against each individual word in the
+  // name (handles multi-word logo names like "Coca Cola" matching "coca").
+  if (levenshtein(q, n) <= maxDistance) return true;
+
+  const words = n.split(/\s+/).filter(Boolean);
+  return words.some((w) => w.length >= 4 && levenshtein(q, w) <= maxDistance);
 }
 
 export async function POST(req) {
@@ -78,28 +75,18 @@ export async function POST(req) {
       .map((logo) => {
         let score = 0;
         const name = logo.logoName || "";
-        const tags = toTagArray(logo.tags);
-        const categories = toCategoryArray(logo.category);
 
-        // Priority 1 — exact title match
+        // Priority 1 — exact name match
         if (exactMatch(query, name)) {
           score = 1000;
         }
-        // Priority 2 — partial (substring) title match
+        // Priority 2 — partial (substring) name match
         else if (substringMatch(query, name)) {
           score = 500;
         }
-        // Priority 3 — tags match (exact or substring, no fuzz)
-        else if (tags.some((tag) => exactMatch(query, tag) || substringMatch(query, tag))) {
-          score = 200;
-        }
-        // Priority 4 — category match (substring first, tiny fuzz only as last resort)
-        else if (
-          categories.some(
-            (cat) => substringMatch(query, cat) || fuzzyCategoryMatch(query, cat)
-          )
-        ) {
-          score = 50;
+        // Priority 3 — fuzzy name match (typo tolerance)
+        else if (fuzzyNameMatch(query, name)) {
+          score = 100;
         }
 
         return { ...logo, score };

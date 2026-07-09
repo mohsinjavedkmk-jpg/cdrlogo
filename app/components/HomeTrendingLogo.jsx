@@ -99,7 +99,7 @@ const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
         </div>
 
         <div className="tl-formats">
-          {["AI", "SVG", "PNG"].map(f => {
+          {["AI","CDR","SVG", "PNG"].map(f => {
             const fc = FORMAT_COLORS[f];
             return (
               <span

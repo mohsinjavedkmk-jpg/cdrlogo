@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../lib/prisma";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 24;
 
 export async function POST(req) {
   try {
