@@ -42,9 +42,12 @@ export async function generateMetadata({ params }) {
       description,
       alternates: { canonical },
       robots: {
-        index: true,
-        follow: true,
-        googleBot: { index: true, follow: true },
+        index: false,
+        follow: false,
+        googleBot: {
+          index: false,
+          follow: false,
+        },
       },
       openGraph: {
         title,
