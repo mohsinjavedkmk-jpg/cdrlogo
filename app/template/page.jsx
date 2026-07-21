@@ -5,11 +5,12 @@ import { useTheme } from "../context/ThemeContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const PER_PAGE = 10;
 
 const FORMAT_CHIPS = [
-  { label: "AI",  cls: "fmt-ai"  },
+  { label: "AI", cls: "fmt-ai" },
   { label: "CDR", cls: "fmt-cdr" },
   { label: "SVG", cls: "fmt-svg" },
   { label: "PNG", cls: "fmt-png" },
@@ -22,15 +23,15 @@ function getInitials(name = "") {
 export default function TemplatesPage() {
   const { dark } = useTheme();
 
-  const [logos,         setLogos]         = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(null);
-  const [activeFilter,  setActiveFilter]  = useState("All");
-  const [currentPage,   setCurrentPage]   = useState(1);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const [total,         setTotal]         = useState(0);
-  const [categories,    setCategories]    = useState(["All"]);
-  const [searchQuery,   setSearchQuery]   = useState("");
+  const [logos, setLogos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [categories, setCategories] = useState(["All"]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
 
   // Debounced search — waits 400ms after user stops typing
@@ -51,9 +52,9 @@ export default function TemplatesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type:     "template",
+          type: "template",
           page,
-          limit:    PER_PAGE,
+          limit: PER_PAGE,
           category,
           search,
         }),
@@ -93,7 +94,7 @@ export default function TemplatesPage() {
 
   const paginationItems = buildPages(totalPages, currentPage);
   const showingFrom = total === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
-  const showingTo   = Math.min(currentPage * PER_PAGE, total);
+  const showingTo = Math.min(currentPage * PER_PAGE, total);
 
   return (
     <>
@@ -401,20 +402,20 @@ export default function TemplatesPage() {
       <div className="brands-root">
         <div className="brands-inner">
           <Navbar />
-  <div className="h-10" />
+          <div className="h-10" />
           {/* Hero */}
           <section className="brands-hero">
-          
-            
+
+
 
             <h1 className="hero-title">
-             Creative Logo Concept 
+              Creative Logo Concept
               <span className="accent"> & </span>{" "}
-          Template Library
+              Template Library
             </h1>
 
             <p className="hero-sub">
-             Explore an independent educational library of original logo concepts, design templates, and creative experiments organized for research, learning, and visual inspiration. Access editable AI, CDR, SVG, and PNG reference files, raw SVG source codes, and precise color mapping for typography and layout studies.
+              Explore an independent educational library of original logo concepts, design templates, and creative experiments organized for research, learning, and visual inspiration. Access editable AI, CDR, SVG, and PNG reference files, raw SVG source codes, and precise color mapping for typography and layout studies.
             </p>
 
             <div className="fmt-row">
@@ -477,7 +478,7 @@ export default function TemplatesPage() {
                   </button>
                 ))}
               </div>
-              
+
             </div>
           )}
 
@@ -538,7 +539,7 @@ export default function TemplatesPage() {
           )}
         </div>
       </div>
-            <Footer/>
+      <Footer />
     </>
   );
 }
@@ -550,10 +551,11 @@ function LogoCard({ logo, index }) {
   const isTrending = logo.downloads > 8000;
   const router = useRouter();
   return (
-    <div className="logo-card" style={{ animationDelay: `${index * 35}ms` }} onClick={()=>{router.push(`/logo/${logo.slug?.toLowerCase()}`)}}>
+    <div className="logo-card" style={{ animationDelay: `${index * 35}ms` }} onClick={() => { router.push(`/logo/${logo.slug?.toLowerCase()}`) }}>
       <div className="card-img-wrap">
         {logo.webpUrl && !imgError ? (
-          <img className="card-img" src={logo.webpUrl} alt={logo.logoName} onError={() => setImgError(true)} />
+          <Image className="card-img" src={logo.webpUrl} width={150}
+            height={150} alt={logo.logoName} onError={() => setImgError(true)} />
         ) : (
           <div className="card-placeholder">{getInitials(logo.logoName)}</div>
         )}
@@ -565,7 +567,7 @@ function LogoCard({ logo, index }) {
         <div className="card-name">{logo.logoName}</div>
         <div className="card-cat">{logo.category[0]}</div>
         <div className="card-footer">
-         
+
           <div className="fmt-chips">
             {FORMAT_CHIPS.map((f) => <span key={f.label} className={`fmt ${f.cls}`}>{f.label}</span>)}
           </div>

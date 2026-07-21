@@ -3,60 +3,61 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "../context/ThemeContext";
+import Image from "next/image";
 
 const SOCIAL_ICONS = {
-    twitter: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.635 5.904-5.635Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-        </svg>
-    ),
-    facebook: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-        </svg>
-    ),
-    instagram: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
-        </svg>
-    ),
-    pinterest: (
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
-        </svg>
-    ),
+  twitter: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.635 5.904-5.635Zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  ),
+  facebook: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+    </svg>
+  ),
+  instagram: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z" />
+    </svg>
+  ),
+  pinterest: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+    </svg>
+  ),
 };
 
 const QUICK_LINKS = [
-    { label: "Contact Us", href: "/contact-us" },
-    { label: "Request Logo", href: "/request" },
-    { label: "Brands", href: "/brands" },
-    { label: "Template", href: "/template" },
-    { label: "Sitemap", href: "/sitemap.xml" },
+  { label: "Contact Us", href: "/contact-us" },
+  { label: "Request Logo", href: "/request" },
+  { label: "Brands", href: "/brands" },
+  { label: "Template", href: "/template" },
+  { label: "Sitemap", href: "/sitemap.xml" },
 ];
 
 export default function Footer() {
-    const { dark } = useTheme();
-    const [footer, setFooter] = useState({});
-    const [footerPages, setFooterPages] = useState([]);
-    const [legalPages, setLegalPages] = useState([]);
+  const { dark } = useTheme();
+  const [footer, setFooter] = useState({});
+  const [footerPages, setFooterPages] = useState([]);
+  const [legalPages, setLegalPages] = useState([]);
 
-    useEffect(() => {
-        fetch("/api/website/footer")
-            .then((r) => r.json())
-            .then(({ footer, footerPages, legalPages }) => {
-                setFooter(footer ?? {});
-                setFooterPages(footerPages ?? []);
-                setLegalPages(legalPages ?? []);
-            })
-            .catch(() => { });
-    }, []);
+  useEffect(() => {
+    fetch("/api/website/footer")
+      .then((r) => r.json())
+      .then(({ footer, footerPages, legalPages }) => {
+        setFooter(footer ?? {});
+        setFooterPages(footerPages ?? []);
+        setLegalPages(legalPages ?? []);
+      })
+      .catch(() => { });
+  }, []);
 
-    const theme = dark ? "dark" : "light";
+  const theme = dark ? "dark" : "light";
 
-    return (
-        <>
-            <style>{`
+  return (
+    <>
+      <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap');
 
         [data-footer-theme="dark"] {
@@ -381,22 +382,23 @@ export default function Footer() {
         }
       `}</style>
 
-            <footer className="cdr-footer" data-footer-theme={theme}>
-                <div className="cdr-footer-inner">
+      <footer className="cdr-footer" data-footer-theme={theme}>
+        <div className="cdr-footer-inner">
 
-                    {/* ── Top grid ── */}
-                    <div className="cdr-footer-top">
+          {/* ── Top grid ── */}
+          <div className="cdr-footer-top">
 
-                        {/* Brand */}
-                        <div className="f-brand-col">
-                            <Link href="/" className="f-logo-wrap">
-                                <img src={`/cdrlogo-${theme}.svg`} alt="CDRLOGO" className="h-10 w-auto" />
-                            </Link>
-                            <p className="f-desc">
-                                {footer.description ||
-                                    "Your free library of high-quality brand logos and creative templates."}
-                            </p>
-                            {/* <div className="f-socials">
+            {/* Brand */}
+            <div className="f-brand-col">
+              <Link href="/" className="f-logo-wrap">
+                <Image src={`/cdrlogo-${theme}.svg`} width={140}
+                  height={32} alt="CDRLOGO" className="h-10 w-auto" priority={true} />
+              </Link>
+              <p className="f-desc">
+                {footer.description ||
+                  "Your free library of high-quality brand logos and creative templates."}
+              </p>
+              {/* <div className="f-socials">
                                 {["twitter", "facebook", "instagram", "pinterest"].map((platform) =>
                                     footer[platform] ? (
                                         <a
@@ -412,79 +414,79 @@ export default function Footer() {
                                     ) : null
                                 )}
                             </div> */}
-                        </div>
+            </div>
 
-                        {/* Pages */}
-                        <div>
-                            <p className="f-col-head">Pages</p>
-                            <ul className="f-link-list">
-                                {footerPages.length > 0 ? (
-                                    footerPages.map((page) => (
-                                        <li key={page.id}>
-                                            <Link href={`/${page.slug}`}>{page.title}</Link>
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li style={{ fontSize: 12, color: "var(--f-desc)" }}>No pages yet</li>
-                                )}
-                            </ul>
-                        </div>
+            {/* Pages */}
+            <div>
+              <p className="f-col-head">Pages</p>
+              <ul className="f-link-list">
+                {footerPages.length > 0 ? (
+                  footerPages.map((page) => (
+                    <li key={page.id}>
+                      <Link href={`/${page.slug}`}>{page.title}</Link>
+                    </li>
+                  ))
+                ) : (
+                  <li style={{ fontSize: 12, color: "var(--f-desc)" }}>No pages yet</li>
+                )}
+              </ul>
+            </div>
 
-                        {/* Legal */}
-                        <div>
-                            <p className="f-col-head">Legal</p>
-                            <ul className="f-link-list">
-                                {legalPages.length > 0 ? (
-                                    legalPages.map((page) => (
-                                        <li key={page.id}>
-                                            <Link href={`/${page.slug}`}>{page.title}</Link>
-                                        </li>
-                                    ))
-                                ) : (
-                                    <li style={{ fontSize: 12, color: "var(--f-desc)" }}>No pages yet</li>
-                                )}
-                            </ul>
-                        </div>
+            {/* Legal */}
+            <div>
+              <p className="f-col-head">Legal</p>
+              <ul className="f-link-list">
+                {legalPages.length > 0 ? (
+                  legalPages.map((page) => (
+                    <li key={page.id}>
+                      <Link href={`/${page.slug}`}>{page.title}</Link>
+                    </li>
+                  ))
+                ) : (
+                  <li style={{ fontSize: 12, color: "var(--f-desc)" }}>No pages yet</li>
+                )}
+              </ul>
+            </div>
 
-                        {/* Quick Links */}
-                        <div>
-                            <p className="f-col-head">Quick Links</p>
-                            <div className="f-ql-grid">
-                                <ul className="f-link-list">
-                                    {QUICK_LINKS.slice(0, Math.ceil(QUICK_LINKS.length / 2)).map((link) => (
-                                        <li key={link.href}>
-                                            <Link href={link.href}>{link.label}</Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                                <ul className="f-link-list">
-                                    {QUICK_LINKS.slice(Math.ceil(QUICK_LINKS.length / 2)).map((link) => (
-                                        <li key={link.href}>
-                                            <Link href={link.href}>{link.label}</Link>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+            {/* Quick Links */}
+            <div>
+              <p className="f-col-head">Quick Links</p>
+              <div className="f-ql-grid">
+                <ul className="f-link-list">
+                  {QUICK_LINKS.slice(0, Math.ceil(QUICK_LINKS.length / 2)).map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href}>{link.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+                <ul className="f-link-list">
+                  {QUICK_LINKS.slice(Math.ceil(QUICK_LINKS.length / 2)).map((link) => (
+                    <li key={link.href}>
+                      <Link href={link.href}>{link.label}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
 
-                    {/* ── Gradient divider ── */}
-                    <div className="f-divider" />
+          {/* ── Gradient divider ── */}
+          <div className="f-divider" />
 
-                   
 
-                    {/* ── Bottom bar ── */}
-                    <div className="cdr-footer-bottom">
-                        <span className="f-copyright">
-                          {/* footer.copyright */}
-                             © 2026 CDRLOGO.com. All rights reserved.
-                        </span>
-                        <div className="f-bottom-right">
-                          
-                        </div>
-                    </div>
-                </div>
-            </footer>
-        </>
-    );
+
+          {/* ── Bottom bar ── */}
+          <div className="cdr-footer-bottom">
+            <span className="f-copyright">
+              {/* footer.copyright */}
+              © 2026 CDRLOGO.com. All rights reserved.
+            </span>
+            <div className="f-bottom-right">
+
+            </div>
+          </div>
+        </div>
+      </footer>
+    </>
+  );
 }

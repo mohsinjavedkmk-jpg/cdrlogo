@@ -5,13 +5,14 @@ import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import Image from "next/image";
 
 const CATEGORY_PALETTE = [
-  { bg: "rgba(239,68,68,.12)",  border: "rgba(239,68,68,.28)",  color: "#fca5a5", light: "#dc2626" },
-  { bg: "rgba(234,179,8,.12)",  border: "rgba(234,179,8,.28)",  color: "#fde68a", light: "#b45309" },
+  { bg: "rgba(239,68,68,.12)", border: "rgba(239,68,68,.28)", color: "#fca5a5", light: "#dc2626" },
+  { bg: "rgba(234,179,8,.12)", border: "rgba(234,179,8,.28)", color: "#fde68a", light: "#b45309" },
   { bg: "rgba(59,130,246,.12)", border: "rgba(59,130,246,.28)", color: "#93c5fd", light: "#1d4ed8" },
   { bg: "rgba(168,85,247,.12)", border: "rgba(168,85,247,.28)", color: "#d8b4fe", light: "#7e22ce" },
-  { bg: "rgba(7,166,38,.12)",   border: "rgba(7,166,38,.28)",   color: "#4ade80", light: "#15803d" },
+  { bg: "rgba(7,166,38,.12)", border: "rgba(7,166,38,.28)", color: "#4ade80", light: "#15803d" },
   { bg: "rgba(236,72,153,.12)", border: "rgba(236,72,153,.28)", color: "#f9a8d4", light: "#be185d" },
   { bg: "rgba(20,184,166,.12)", border: "rgba(20,184,166,.28)", color: "#5eead4", light: "#0f766e" },
 ];
@@ -34,7 +35,7 @@ function BlogCard({ blog, dark, index, ready }) {
   const router = useRouter();
   const catStyle = getCatColor(blog.category, dark);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError]   = useState(false);
+  const [imgError, setImgError] = useState(false);
   const showImage = !!blog.image && !imgError;
 
   return (
@@ -48,13 +49,14 @@ function BlogCard({ blog, dark, index, ready }) {
       <div className="card-cover">
         {showImage ? (
           <>
-            <img
+            <Image
               className={`card-image${imgLoaded ? " loaded" : ""}`}
               src={blog.image}
               alt={blog.title}
               loading="lazy"
               decoding="async"
               onLoad={() => setImgLoaded(true)}
+             fill
               onError={() => setImgError(true)}
             />
             {!imgLoaded && <div className="card-image-skel skel-block" />}
@@ -72,15 +74,15 @@ function BlogCard({ blog, dark, index, ready }) {
         <p className="card-excerpt">{blog.excerpt}</p>
         <div className="card-footer">
           <span className="card-meta">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
             {formatDate(blog.createdAt)}
           </span>
           <span className="card-meta">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
             {blog.readTime} min read
           </span>
           <span className="card-arrow">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
           </span>
         </div>
       </div>
@@ -104,17 +106,17 @@ export default function BlogPage() {
   const { dark } = useTheme();
   const theme = dark ? "dark" : "light";
 
-  const [blogs, setBlogs]             = useState([]);
+  const [blogs, setBlogs] = useState([]);
   // categories is now a plain string[]
-  const [categories, setCategories]   = useState([]);
-  const [activeCategory, setActiveCat]= useState("All");
-  const [page, setPage]               = useState(1);
-  const [pagination, setPagination]   = useState(null);
-  const [loading, setLoading]         = useState(true);
-  const [catLoading, setCatLoading]   = useState(true);
-  const [error, setError]             = useState(null);
-  const [ready, setReady]             = useState(false);
-  const [searchVal, setSearchVal]     = useState("");
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCat] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [catLoading, setCatLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [searchVal, setSearchVal] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
 
@@ -125,7 +127,7 @@ export default function BlogPage() {
       const p = new URLSearchParams({ page, limit: "9" });
       if (activeCategory !== "All") p.set("category", activeCategory);
       if (searchQuery) p.set("search", searchQuery);
-      console.log("pyyt",p)
+      console.log("pyyt", p)
       const res = await fetch(`/api/blogs?${p}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -145,8 +147,8 @@ export default function BlogPage() {
     if (!loading) { const t = setTimeout(() => setReady(true), 40); return () => clearTimeout(t); }
   }, [loading]);
 
-  const handleCat    = (cat) => { setActiveCat(cat); setPage(1); };
-  const handleSearch = ()    => { setSearchQuery(searchVal.trim()); setPage(1); };
+  const handleCat = (cat) => { setActiveCat(cat); setPage(1); };
+  const handleSearch = () => { setSearchQuery(searchVal.trim()); setPage(1); };
 
   return (
     <>
@@ -223,8 +225,8 @@ export default function BlogPage() {
       `}</style>
 
       <div data-theme={theme} className="blog-root">
-        <Navbar/>
-        <div className="h-10"/>
+        <Navbar />
+        <div className="h-10" />
         <div className="bg-glow" /><div className="dot-grid" />
         <div className="inner">
 
@@ -236,12 +238,12 @@ export default function BlogPage() {
           <div className="controls">
             {/* Search */}
             <div className="search-bar">
-              <svg className="s-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg className="s-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               <input className="s-input" type="text" placeholder="Search blog posts…" value={searchVal} onChange={e => setSearchVal(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} />
               <button className="s-btn" onClick={handleSearch}>Search</button>
             </div>
 
-          
+
           </div>
 
           {/* Grid */}
@@ -266,20 +268,20 @@ export default function BlogPage() {
           {pagination && pagination.totalPages > 1 && !loading && !error && (
             <nav className="pagination">
               <button className="pg-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               </button>
               {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(p => (
                 <button key={p} className={`pg-btn${page === p ? " active" : ""}`} onClick={() => setPage(p)}>{p}</button>
               ))}
               <button className="pg-btn" disabled={page >= pagination.totalPages} onClick={() => setPage(p => p + 1)}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
               </button>
             </nav>
           )}
 
         </div>
       </div>
-      <Footer/>
+      <Footer />
     </>
   );
 }

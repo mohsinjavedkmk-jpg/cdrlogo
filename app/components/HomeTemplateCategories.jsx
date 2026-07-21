@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
-
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 const PER_PAGE = 10;
@@ -322,13 +322,19 @@ export default function TemplatesPage() {
           from { opacity: 0; transform: translateY(10px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        .card-img-wrap {
-          width: 100%; aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03);
-          display: flex; align-items: center; justify-content: center;
-          overflow: hidden; position: relative;
-        }
+       .card-img-wrap {
+  width: 100%; aspect-ratio: 1 / 0.85; background: rgba(255,255,255,0.03);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+  padding: 14%;               /* ← yeh add karo, taake 72% wala visual effect wapas aaye */
+  box-sizing: border-box;     /* ← yeh bhi add karo */
+}
+.card-img {
+  object-fit: contain;
+  transition: transform .3s;
+}
         [data-theme="light"] .card-img-wrap { background: rgba(0,0,0,0.03); }
-        .card-img { width: 72%; height: 72%; object-fit: contain; transition: transform .3s; }
+      
         .logo-card:hover .card-img { transform: scale(1.06); }
         .card-placeholder {
           width: 72%; height: 72%; border-radius: 10px; background: var(--skeleton-bg);
@@ -455,7 +461,7 @@ export default function TemplatesPage() {
           {/* Pagination */}
           {!loading && !error && totalPages > 1 && (
             <div className="pagination-wrap">
-              
+
               <div className="pagination">
                 <button className="pg-btn" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} title="First">«</button>
                 <button className="pg-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} title="Previous">‹</button>
@@ -496,7 +502,15 @@ function LogoCard({ logo, index }) {
     <div className="logo-card" style={{ animationDelay: `${index * 35}ms` }} onClick={() => { router.push(`/logo/${logo.slug?.toLowerCase()}`) }}>
       <div className="card-img-wrap">
         {logo.webpUrl && !imgError ? (
-          <img className="card-img" src={logo.webpUrl} alt={logo.logoName} onError={() => setImgError(true)} />
+          <Image
+            className="card-img"
+            src={logo.webpUrl}
+            alt={logo.logoName}
+             width={100}
+            height={100}
+            sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="card-placeholder">{getInitials(logo.logoName)}</div>
         )}

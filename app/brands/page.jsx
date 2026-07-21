@@ -5,11 +5,12 @@ import { useTheme } from "../context/ThemeContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const PER_PAGE = 12;
 
 const FORMAT_CHIPS = [
-  { label: "AI",  cls: "fmt-ai"  },
+  { label: "AI", cls: "fmt-ai" },
   { label: "CDR", cls: "fmt-cdr" },
   { label: "SVG", cls: "fmt-svg" },
   { label: "PNG", cls: "fmt-png" },
@@ -22,15 +23,15 @@ function getInitials(name = "") {
 export default function BrandsPage() {
   const { dark } = useTheme();
 
-  const [logos,         setLogos]         = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState(null);
-  const [activeFilter,  setActiveFilter]  = useState("All");
-  const [currentPage,   setCurrentPage]   = useState(1);
-  const [totalPages,    setTotalPages]    = useState(1);
-  const [total,         setTotal]         = useState(0);
-  const [categories,    setCategories]    = useState(["All"]);
-  const [searchQuery,   setSearchQuery]   = useState("");
+  const [logos, setLogos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [categories, setCategories] = useState(["All"]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
 
   // Debounced search — waits 400ms after user stops typing
@@ -51,9 +52,9 @@ export default function BrandsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type:     "brand",
+          type: "brand",
           page,
-          limit:    PER_PAGE,
+          limit: PER_PAGE,
           category,
           search,
         }),
@@ -93,7 +94,7 @@ export default function BrandsPage() {
 
   const paginationItems = buildPages(totalPages, currentPage);
   const showingFrom = total === 0 ? 0 : (currentPage - 1) * PER_PAGE + 1;
-  const showingTo   = Math.min(currentPage * PER_PAGE, total);
+  const showingTo = Math.min(currentPage * PER_PAGE, total);
 
   return (
     <>
@@ -405,17 +406,17 @@ export default function BrandsPage() {
 
           {/* Hero */}
           <section className="brands-hero">
-            <div className="h-10"/>
-           
+            <div className="h-10" />
+
 
             <h1 className="hero-title">
               Brand Logo {" "}
               <span className="accent">Reference Library</span>{" "}
-            
+
             </h1>
 
             <p className="hero-sub">
-             Explore an independent educational library of brand logo references organized for research, learning, and creative inspiration. Access AI, CDR, SVG, and PNG reference files, one-click SVG source codes, official website links, and precise color mapping through a fast, structured platform.
+              Explore an independent educational library of brand logo references organized for research, learning, and creative inspiration. Access AI, CDR, SVG, and PNG reference files, one-click SVG source codes, official website links, and precise color mapping through a fast, structured platform.
             </p>
 
             <div className="fmt-row">
@@ -511,7 +512,7 @@ export default function BrandsPage() {
           {/* Pagination */}
           {!loading && !error && totalPages > 1 && (
             <div className="pagination-wrap">
-             
+
               <div className="pagination">
                 <button className="pg-btn" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} title="First">«</button>
                 <button className="pg-btn" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} title="Previous">‹</button>
@@ -537,7 +538,7 @@ export default function BrandsPage() {
           )}
         </div>
       </div>
-            <Footer/>
+      <Footer />
     </>
   );
 }
@@ -547,13 +548,21 @@ function LogoCard({ logo, index }) {
   const [imgError, setImgError] = useState(false);
   const colors = (logo.brandColors ?? []).slice(0, 3);
   const isTrending = logo.downloads > 8000;
-  const router =useRouter();
+  const router = useRouter();
 
   return (
-    <div className="logo-card" style={{ animationDelay: `${index * 35}ms` }} onClick={()=>{router.push(`/logo/${logo.slug?.toLowerCase()}`)}}>
+    <div className="logo-card" style={{ animationDelay: `${index * 35}ms` }} onClick={() => { router.push(`/logo/${logo.slug?.toLowerCase()}`) }}>
       <div className="card-img-wrap">
         {logo.webpUrl && !imgError ? (
-          <img className="card-img" src={logo.webpUrl} alt={logo.logoName} onError={() => setImgError(true)} />
+          <Image
+            className="card-img"
+            src={logo.webpUrl}
+            width={150}
+            height={150}
+            priority={true}
+            alt={logo.logoName}
+            onError={() => setImgError(true)}
+          />
         ) : (
           <div className="card-placeholder">{getInitials(logo.logoName)}</div>
         )}
@@ -565,7 +574,7 @@ function LogoCard({ logo, index }) {
         <div className="card-name">{logo.logoName}</div>
         <div className="card-cat">{logo.category[1] ? logo.category[1] : logo.category[0]}</div>
         <div className="card-footer">
-          
+
           <div className="fmt-chips">
             {FORMAT_CHIPS.map((f) => <span key={f.label} className={`fmt ${f.cls}`}>{f.label}</span>)}
           </div>

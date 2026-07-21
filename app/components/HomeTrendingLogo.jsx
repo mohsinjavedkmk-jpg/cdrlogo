@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+
 const FORMAT_COLORS = {
   AI: { bg: "rgba(234,179,8,.12)", border: "rgba(234,179,8,.3)", color: "#fde68a", colorLight: "#92400e" },
   SVG: { bg: "rgba(34,197,94,.12)", border: "rgba(34,197,94,.3)", color: "#86efac", colorLight: "#166534" },
@@ -47,7 +49,7 @@ function SkeletonCard() {
 function TrendingCard({ logo, dark }) {
   const [hovered, setHovered] = useState(false);
   const [imgErr, setImgErr] = useState(false);
-const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
+  const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
   const router = useRouter();
 
   return (
@@ -56,7 +58,7 @@ const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={
-        (e)=>{
+        (e) => {
           e.preventDefault();
           router.push(`/logo/${logo.slug}`)
         }
@@ -75,10 +77,16 @@ const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
         </div>
 
         {!imgErr && logo.webpUrl
-          ? <img src={logo.webpUrl} alt={logo.logoName} onError={() => setImgErr(true)} className="tl-logo-img"
+          ? <Image
+            src={logo.webpUrl}
+            alt={logo.logoName}
+            width={150}
+            height={150}
+            sizes="(max-width: 560px) 50vw, (max-width: 820px) 33vw, (max-width: 1100px) 25vw, 16vw"
+            onError={() => setImgErr(true)}
+            className="tl-logo-img"
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
-
           />
           : <span className="tl-brand-name">{logo.logoName}</span>
         }
@@ -99,7 +107,7 @@ const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
         </div>
 
         <div className="tl-formats">
-          {["AI","CDR","SVG", "PNG"].map(f => {
+          {["AI", "CDR", "SVG", "PNG"].map(f => {
             const fc = FORMAT_COLORS[f];
             return (
               <span
@@ -172,8 +180,8 @@ export default function TrendingLogos() {
         .tl-card--hovered{border-color:var(--tl-border-h);transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.25)}
         [data-theme="dark"] .tl-card--hovered{box-shadow:0 16px 40px rgba(0,0,0,.55)}
 
-        .tl-preview{position:relative;height:160px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-        .tl-logo-img{width:100%;height:100%;object-fit:contain;padding:20px}
+       .tl-preview{position:relative;height:160px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+       .tl-logo-img{object-fit:contain;padding:20px}
 
         .tl-badge{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(7,166,38,0.85);border-radius:100px;font-size:8.5px;font-weight:700;letter-spacing:.6px;color:#fff}
 

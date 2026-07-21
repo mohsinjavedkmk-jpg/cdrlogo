@@ -5,6 +5,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useRouter, useParams } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import Image from "next/image";
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -311,13 +312,14 @@ export default function BlogPostPage() {
                 <div className="hero-cover">
                   {showHeroImage ? (
                     <>
-                      <img
+                      <Image
                         className={`hero-img${heroLoaded ? " loaded" : ""}`}
                         src={blog.image}
                         alt={blog.title}
                         decoding="async"
                         onLoad={() => setHeroLoaded(true)}
                         onError={() => setHeroError(true)}
+                        fill
                       />
                       {!heroLoaded && <div className="hero-img-skel" />}
                     </>

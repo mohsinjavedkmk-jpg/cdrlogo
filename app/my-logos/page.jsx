@@ -8,6 +8,7 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import ProfileSubNav from "../components/ProfileSubNav";
 import "../profile/profile-glass.css";
+import Image from "next/image";
 
 export default function MyLogosPage() {
   const { status } = useSession();
@@ -182,7 +183,8 @@ export default function MyLogosPage() {
                   <div key={logo.id} className="pg-glass pg-logo" style={{ animationDelay: `${i * 25}ms` }}>
                     <Link href={`/logo/${logo.slug}`} style={{ textDecoration: "none" }}>
                       <div className="pg-logo-img">
-                        {logo.webpUrl ? <img src={logo.webpUrl} alt={logo.logoName} /> : <div className="pg-no-img" />}
+                        {logo.webpUrl ? <Image src={logo.webpUrl} alt={logo.logoName}  width={150}
+            height={150} /> : <div className="pg-no-img" />}
                         <div className="pg-view-overlay">
                           <span className="pg-view-pill">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
@@ -270,7 +272,8 @@ export default function MyLogosPage() {
                   <div key={logo.id} className="pg-glass pg-logo" style={{ animationDelay: `${i * 25}ms` }}>
                     <Link href={`/logo/${logo.slug}`} style={{ textDecoration: "none" }}>
                       <div className="pg-logo-img">
-                        {logo.webpUrl ? <img src={logo.webpUrl} alt={logo.logoName} /> : <div className="pg-no-img" />}
+                        {logo.webpUrl ? <Image src={logo.webpUrl} alt={logo.logoName}  width={150}
+            height={150} /> : <div className="pg-no-img" />}
                         <div className="pg-view-overlay">
                           <span className="pg-view-pill">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none"

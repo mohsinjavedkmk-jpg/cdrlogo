@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -597,7 +598,8 @@ export default function Navbar() {
 
           {/* Logo */}
           <Link href="/" className="navbar-logo">
-            <img src={dark ? "/cdrlogo-dark.svg" : "/cdrlogo-light.svg"} alt="CDRLogo" />
+            <Image src={dark ? "/cdrlogo-dark.svg" : "/cdrlogo-light.svg"} width={140}
+              height={32} alt="CDRLogo" />
           </Link>
 
           {/* Desktop nav links */}
@@ -651,59 +653,59 @@ export default function Navbar() {
                 </button>
 
                 <div className="avatar-wrap">
-                <button
-                  className="avatar-btn"
-                  aria-label="Account menu"
-                  onClick={() => setDropOpen(v => !v)}
-                >
-                  {initial}
-                </button>
+                  <button
+                    className="avatar-btn"
+                    aria-label="Account menu"
+                    onClick={() => setDropOpen(v => !v)}
+                  >
+                    {initial}
+                  </button>
 
-                <div className={`avatar-dropdown${dropOpen ? " open" : ""}`}>
-                  {/* User info */}
-                  <div className="drop-header">
-                    <div className="drop-avatar">{initial}</div>
-                    <div className="drop-user-info">
-                      <div className="drop-name">{username || "Account"}</div>
-                      <div className="drop-email">{email}</div>
+                  <div className={`avatar-dropdown${dropOpen ? " open" : ""}`}>
+                    {/* User info */}
+                    <div className="drop-header">
+                      <div className="drop-avatar">{initial}</div>
+                      <div className="drop-user-info">
+                        <div className="drop-name">{username || "Account"}</div>
+                        <div className="drop-email">{email}</div>
+                      </div>
+                    </div>
+
+                    <div className="drop-divider" />
+
+                    {/* Profile / My Logos / Liked Logos */}
+                    <div className="drop-list">
+                      {accountItems.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className="drop-item"
+                          onClick={() => setDropOpen(false)}
+                        >
+                          {item.icon}
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+
+                    <div className="drop-divider" />
+
+                    {/* Logout */}
+                    <div className="drop-signout-wrap">
+                      <button
+                        className="drop-item signout"
+                        onClick={() => { setDropOpen(false); signOut(); }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                          <polyline points="16 17 21 12 16 7" />
+                          <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        Logout
+                      </button>
                     </div>
                   </div>
-
-                  <div className="drop-divider" />
-
-                  {/* Profile / My Logos / Liked Logos */}
-                  <div className="drop-list">
-                    {accountItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className="drop-item"
-                        onClick={() => setDropOpen(false)}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="drop-divider" />
-
-                  {/* Logout */}
-                  <div className="drop-signout-wrap">
-                    <button
-                      className="drop-item signout"
-                      onClick={() => { setDropOpen(false); signOut(); }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                        <polyline points="16 17 21 12 16 7" />
-                        <line x1="21" y1="12" x2="9" y2="12" />
-                      </svg>
-                      Logout
-                    </button>
-                  </div>
-                </div>
                 </div>
               </div>
             ) : !isLoading ? (

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 
 const ALPHABET = ["All", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
   "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0-9"];
@@ -58,11 +59,16 @@ function LogoCard({ logo }) {
 
       <div className="card-image">
         {!imgErr && logo.webpUrl ? (
-          <img src={logo.webpUrl} alt={logo.logoName}
-            onError={() => setImgErr(true)} className="card-img"
+          <Image
+            src={logo.webpUrl}
+            alt={logo.logoName}
+            width={110}
+            height={110}
+            sizes="(max-width: 640px) 50vw, 170px"
+            onError={() => setImgErr(true)}
+            className="card-img"
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
-
           />
         ) : (
           <span className="card-initials">{logo.logoName?.slice(0, 2).toUpperCase()}</span>
@@ -73,7 +79,7 @@ function LogoCard({ logo }) {
         <div className="card-name">{logo.logoName}</div>
         <span className="card-category">{logo.category[1] ? logo.category[1] : logo.category[0]}</span>
 
-      
+
 
         <div className="card-formats">
           {formats.map(f => (
@@ -275,11 +281,12 @@ export default function LogosPage() {
         }
 
         .card-image {
-          width: 100%; height: 130px; background: var(--card-img-bg);
-          display: flex; align-items: center; justify-content: center;
-          overflow: hidden; transition: background 0.3s;
-        }
-        .card-img { width: 100%; height: 100%; object-fit: contain; padding: 0; transform: scale(1.3); }
+  position: relative;
+  width: 100%; height: 160px; background: var(--card-img-bg);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; transition: background 0.3s;
+}
+       .card-img { object-fit: contain; transform: scale(1.3); }
         .card-initials { font-size: 30px; font-weight: 900; color: var(--text-secondary); letter-spacing: -1px; font-family: 'Sora', sans-serif; }
 
         .card-body { padding: 10px 12px 12px; }
@@ -344,7 +351,7 @@ export default function LogosPage() {
 
         <div className="page-header">
           <div>
-            <h1 className="page-title">All Logos</h1>
+            <h2 className="page-title">All Logos</h2>
             <p className="page-subtitle">Browse our educational reference catalog</p>
           </div>
           {/* <div className="sort-group">

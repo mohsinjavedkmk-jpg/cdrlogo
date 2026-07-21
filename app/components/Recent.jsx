@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 function gradientFromColors(colors, dark) {
   if (dark) {
@@ -27,14 +28,14 @@ function gradientFromColors(colors, dark) {
 
 function timeAgo(dateStr) {
   const diffMs = Date.now() - new Date(dateStr).getTime();
-  const mins   = Math.floor(diffMs / 60000);
-  const hours  = Math.floor(mins / 60);
-  const days   = Math.floor(hours / 24);
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
 
-  if (mins   < 1)  return "just now";
-  if (mins   < 60) return `${mins}m ago`;
-  if (hours  < 24) return `${hours}h ago`;
-  if (days   < 7)  return `${days}d ago`;
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
@@ -52,7 +53,7 @@ function SkeletonCard() {
 
 function RecentCard({ logo, dark }) {
   const [hovered, setHovered] = useState(false);
-  const [imgErr, setImgErr]   = useState(false);
+  const [imgErr, setImgErr] = useState(false);
   const { bgFrom, bgTo } = gradientFromColors(logo.brandColors, dark);
   const router = useRouter();
 
@@ -72,21 +73,23 @@ function RecentCard({ logo, dark }) {
       >
         <div className="rl-badge">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
           </svg>
           NEW
         </div>
 
         {!imgErr && logo.webpUrl
-          ? <img
-              src={logo.webpUrl}
-              alt={logo.logoName}
-              onError={() => setImgErr(true)}
-              className="rl-logo-img"
-              draggable={false}
-              onDragStart={(e) => e.preventDefault()}
-            />
+          ? <Image
+            src={logo.webpUrl}
+            alt={logo.logoName}
+            onError={() => setImgErr(true)}
+            className="rl-logo-img"
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
+            fill
+            sizes="(max-width: 560px) 50vw, (max-width: 820px) 33vw, (max-width: 1100px) 25vw, 16vw"
+          />
           : <span className="rl-brand-name">{logo.logoName}</span>
         }
       </div>
@@ -106,9 +109,9 @@ function RecentCard({ logo, dark }) {
 
 export default function RecentLogos() {
   const { dark } = useTheme();
-  const [logos,   setLogos]   = useState([]);
+  const [logos, setLogos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetch("/api/logo/fetch/recent")
@@ -152,7 +155,7 @@ export default function RecentLogos() {
         [data-theme="dark"] .rl-card--hovered{box-shadow:0 16px 40px rgba(0,0,0,.55)}
 
         .rl-preview{position:relative;height:160px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-        .rl-logo-img{width:100%;height:100%;object-fit:contain;padding:20px}
+.rl-logo-img{object-fit:contain;padding:20px}
 
         .rl-badge{position:absolute;top:10px;left:10px;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(59,130,246,0.85);border-radius:100px;font-size:8.5px;font-weight:700;letter-spacing:.6px;color:#fff}
 

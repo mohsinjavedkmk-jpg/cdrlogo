@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
-
+import Image from "next/image";
 const PER_PAGE = 10;
 
 function BrandCard({ cat, index, dark }) {
@@ -30,7 +30,8 @@ function BrandCard({ cat, index, dark }) {
       {hasImages ? (
         <div className="bc-imgs">
           {cat.images.map((src, i) => (
-            <img key={i} src={src} alt="" className="bc-img" loading="lazy" />
+            <Image key={i} src={src} width={22}
+              height={22} alt="" className="bc-img" loading="lazy"/>
           ))}
         </div>
       ) : (
@@ -62,10 +63,10 @@ function SkeletonCard() {
 
 export default function BrandCategories() {
   const { dark } = useTheme();
-  const [cats,    setCats]    = useState([]);
+  const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
-  const [page,    setPage]    = useState(1);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetch("/api/catageory/brand")
@@ -73,8 +74,8 @@ export default function BrandCategories() {
       .then(data => {
         const formatted = (data.categories ?? []).map(c => ({
           category: c.name,
-          count:    c.count,
-          images:   Array.isArray(c.images) ? c.images : [],
+          count: c.count,
+          images: Array.isArray(c.images) ? c.images : [],
         }));
 
         const sorted = formatted.sort((a, b) => b.count - a.count);

@@ -44,6 +44,10 @@ function sanitizeFilename(filename) {
   return `${cleanName}${extension.toLowerCase()}`;
 }
 
+function stripTrailingSlash(url) {
+  return url.replace(/\/+$/, "");
+}
+
 // ── XML escape ────────────────────────────────────────────────────────────────
 function escapeXml(str) {
   return String(str)
@@ -309,8 +313,8 @@ function buildBreadcrumbSchema({ brand, logoName, canonicalUrl }) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.cdrlogo.com/" },
-      { "@type": "ListItem", "position": 2, "name": brandLabel, "item": `https://www.cdrlogo.com/brand/${brandSlug}/` },
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.cdrlogo.com" },
+      { "@type": "ListItem", "position": 2, "name": brandLabel, "item": `https://www.cdrlogo.com/brand/${brandSlug}` },
       { "@type": "ListItem", "position": 3, "name": logoName, "item": canonicalUrl },
     ],
   };
@@ -1064,7 +1068,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     }
 
     const finalSlug = generateSlugFromName(finalLogoName);
-    const canonicalUrl = `https://www.cdrlogo.com/logo/${finalSlug}/`;
+    const canonicalUrl = stripTrailingSlash(`https://www.cdrlogo.com/logo/${finalSlug}`);
     console.log(`  [slug] ${finalSlug}`);
 
     // ── Step B: AI content generation ────────────────────────────────────────

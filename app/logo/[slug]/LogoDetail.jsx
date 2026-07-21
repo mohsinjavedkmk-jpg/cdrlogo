@@ -7,6 +7,7 @@ import Navbar from "../../components/Navbar";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import Footer from "../../components/Footer";
+import Image from "next/image";
 
 export default function LogoDetail() {
     const { slug } = useParams();
@@ -594,7 +595,7 @@ export default function LogoDetail() {
 
                                 <div className="preview-img-wrap">
                                     {logo.webpUrl
-                                        ? <img src={logo.webpUrl} alt={logo.altText || `${logo.logoName} logo PNG SVG vector`} draggable={false} onDragStart={e => e.preventDefault()} />
+                                        ? <img src={logo.webpUrl} alt={logo.altText || `${logo.logoName} logo PNG SVG vector`}  draggable={false} onDragStart={e => e.preventDefault()} />
                                         : <div className="preview-img-placeholder" dangerouslySetInnerHTML={{ __html: logo.svgContent || logo.logoName }} />
                                     }
                                     <div className="img-overlay-bar">
@@ -895,7 +896,7 @@ export default function LogoDetail() {
                                         <Link key={rel.slug} href={`/logo/${rel.slug}`} className="related-card">
                                             <div className="related-img-wrap">
                                                 {rel.webpUrl
-                                                    ? <img src={rel.webpUrl} alt={rel.logoName} />
+                                                    ? <Image src={rel.webpUrl} alt={rel.logoName} width={150} height={150}/>
                                                     : <div className="related-initials">{(rel.brand || rel.logoName)?.slice(0, 2).toUpperCase()}</div>
                                                 }
                                             </div>

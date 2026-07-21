@@ -3,6 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import Navbar from "../../components/Navbar";
+import Image from "next/image";
 
 const PAGE_SIZE = 12;
 
@@ -45,10 +46,12 @@ function LogoCard({ logo }) {
 
       <div className="card-image">
         {!imgErr && logo.webpUrl ? (
-          <img src={logo.webpUrl} alt={logo.logoName}
+          <Image src={logo.webpUrl} alt={logo.logoName}
             onError={() => setImgErr(true)} className="card-img"
             draggable={false}
             onDragStart={(e) => e.preventDefault()}
+             width={150}
+            height={150}
           />
         ) : (
           <span className="card-initials">{logo.logoName?.slice(0, 2).toUpperCase()}</span>
@@ -61,11 +64,7 @@ function LogoCard({ logo }) {
           {logo.category?.[1] ? logo.category[1] : logo.category?.[0]}
         </span>
 
-        <div className="card-colors">
-          {colors.slice(0, 3).map((c, i) => (
-            <span key={i} className="color-dot" style={{ background: c }} />
-          ))}
-        </div>
+     
 
         <div className="card-formats">
           {formats.map(f => (
