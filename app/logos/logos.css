@@ -1,0 +1,51 @@
+.logos-index-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  font-size: 0.95rem;
+}
+
+.logos-index-page h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0 0 0.25rem;
+}
+
+.count {
+  color: #777;
+  margin-bottom: 1.5rem;
+}
+
+.index-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 3;
+  column-gap: 2rem;
+}
+
+.index-list li {
+  break-inside: avoid;
+  margin-bottom: 0.5rem;
+}
+
+.index-list a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.index-list a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 700px) {
+  .index-list {
+    columns: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .index-list {
+    columns: 1;
+  }
+}

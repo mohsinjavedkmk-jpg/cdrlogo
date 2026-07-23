@@ -33,6 +33,8 @@ const QUICK_LINKS = [
   { label: "Request Logo", href: "/request" },
   { label: "Brands", href: "/brands" },
   { label: "Template", href: "/template" },
+  { label: "All Logos", href: "/logos" },
+  { label: "LLM", href: "/llms.txt" },
   { label: "Sitemap", href: "/sitemap.xml" },
 ];
 

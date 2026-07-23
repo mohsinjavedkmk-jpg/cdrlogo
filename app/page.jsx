@@ -1,15 +1,25 @@
 import React from 'react'
+import dynamic from 'next/dynamic'
 
 import Navbar from './components/Navbar'
 import Home from './components/Home'
-import LogosPage from './components/LogoHome'
-import HomeCatageory from './components/HomeTemplateCategories'
-import BrandCategories from './components/HomeBrandsCatageory'
-import TrendingLogos from './components/HomeTrendingLogo'
-import TopBrands from './components/HomeTopBrand'
-import Footer from './components/Footer'
-import PantoneColorPicker from './components/Pantone'
-import Recent from "./components/Recent"
+
+// Below-the-fold components — lazy-loaded so they don't block initial
+// page render / LCP. Home stays as a normal import since it's the
+// hero section visible without scrolling.
+const LogosPage = dynamic(() => import('./components/LogoHome'))
+const HomeCatageory = dynamic(() => import('./components/HomeTemplateCategories'))
+const BrandCategories = dynamic(() => import('./components/HomeBrandsCatageory'))
+const TrendingLogos = dynamic(() => import('./components/HomeTrendingLogo'))
+const TopBrands = dynamic(() => import('./components/HomeTopBrand'))
+const Footer = dynamic(() => import('./components/Footer'))
+const Recent = dynamic(() => import('./components/Recent'))
+
+// Client-side-only interactive tool. The ssr:false + dynamic() logic
+// lives inside PantoneClientOnly.jsx, which is a Client Component —
+// that's required because ssr:false isn't allowed directly inside a
+// Server Component like this page.
+import PantoneColorPicker from './components/Pantoneclientonly'
 
 const websiteSchema = {
   "@context": "https://schema.org",

@@ -66,6 +66,7 @@ function LogoCard({ logo }) {
             height={110}
             sizes="(max-width: 640px) 50vw, 170px"
             onError={() => setImgErr(true)}
+            
             className="card-img"
             draggable={false}
             onDragStart={(e) => e.preventDefault()}

@@ -19,13 +19,17 @@ export default function RootLayout({ children }) {
         <meta name="msvalidate.01" content="C969DC98F5B4EA442FF6FF3A941F9C1A" />
         <meta name="yandex-verification" content="2ba291fe8912edc4" />
 
-        {/* ✅ Google Analytics (gtag.js) — har page par load hoga, kyunki ye root layout hai */}
+        {/*
+          ✅ Google Analytics (gtag.js) — har page par load hoga, kyunki ye root layout hai.
+          strategy="lazyOnload": browser ke idle hone ka wait karta hai, taake GTM ka
+          162 KiB bundle initial render / LCP / TBT ko block na kare. Analytics ke liye
+          kuch second ki delay acceptable hai, user-facing content ke liye nahi.
+        */}
         <Script
-          async
           src="https://www.googletagmanager.com/gtag/js?id=G-CEG962163M"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
-        <Script id="ga-gtag-init" strategy="afterInteractive">
+        <Script id="ga-gtag-init" strategy="lazyOnload">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
