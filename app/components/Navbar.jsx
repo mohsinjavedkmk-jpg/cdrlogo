@@ -6,13 +6,26 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 
+// ── Static nav config (was previously fetched from /api/website/header) ──
+const STATIC_NAV_LINKS = [
+  { label: "Home", href: "/" },
+  { label: "Brands", href: "/brands" },
+  { label: "Logo Templates", href: "/template" },
+  { label: "Categories", href: "/category" },
+  { label: "Blog", href: "/blog" },
+  { label: "Contact", href: "/contact-us" },
+  { label: "Request Logo", href: "/request" },
+];
+const STATIC_SHOW_THEME_TOGGLE = true;
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
   const { dark, setDark } = useTheme();
-  const [navLinks, setNavLinks] = useState([]);
-  const [loadingNav, setLoadingNav] = useState(true);
-  const [showThemeToggle, setShowThemeToggle] = useState(false);
+
+  // Static now — no more fetch/loading state
+  const navLinks = STATIC_NAV_LINKS;
+  const showThemeToggle = STATIC_SHOW_THEME_TOGGLE;
 
   // Upload Logo modal
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -38,30 +51,6 @@ export default function Navbar() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    async function loadNav() {
-      try {
-        const res = await fetch("/api/website/header", { cache: "no-store" });
-        const data = await res.json();
-        if (Array.isArray(data?.navItems)) {
-          setNavLinks(
-            data.navItems
-              .filter((item) => item.add)
-              .map((item) => ({ label: item.label, href: item.link }))
-          );
-        }
-        if (typeof data?.showmode === "boolean") {
-          setShowThemeToggle(data.showmode);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingNav(false);
-      }
-    }
-    loadNav();
   }, []);
 
   // ── Account menu items shown in the avatar dropdown / mobile menu ──────
@@ -603,15 +592,13 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          {!loadingNav && (
-            <ul className="nav-links">
-              {navLinks.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href}>{link.label}</a>
-                </li>
-              ))}
-            </ul>
-          )}
+          <ul className="nav-links">
+            {navLinks.map((link) => (
+              <li key={link.label}>
+                <a href={link.href}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
 
           {/* Actions */}
           <div className="navbar-actions">

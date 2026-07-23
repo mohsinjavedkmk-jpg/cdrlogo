@@ -41,7 +41,8 @@ export async function GET() {
     { url: `${baseUrl}/brands`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${baseUrl}/category`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
      { url: `${baseUrl}/template`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
-         { url: `${baseUrl}/about-us`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+     { url: `${baseUrl}/about-us`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+       { url: `${baseUrl}/logos`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
 
   ];
 

@@ -38,22 +38,38 @@ const QUICK_LINKS = [
   { label: "Sitemap", href: "/sitemap.xml" },
 ];
 
+// ── Static footer config (was previously fetched from /api/website/footer) ──
+const STATIC_FOOTER = {
+  description:
+    "All logos, trademarks, and brand assets are the property of their respective owners. Files are provided for educational, reference, and design-related purposes only.",
+};
+const STATIC_FOOTER_PAGES = [
+  { id: "about-us", slug: "about-us", title: "About Us" },
+];
+const STATIC_LEGAL_PAGES = [
+  { id: "privacy-policy", slug: "privacy-policy", title: "Privacy Policy" },
+  { id: "terms-of-service", slug: "terms-of-service", title: "Terms of Service" },
+  { id: "dmca-copyright-policy", slug: "dmca-copyright-policy", title: "DMCA & Copyright Policy" },
+];
+
 export default function Footer() {
   const { dark } = useTheme();
-  const [footer, setFooter] = useState({});
-  const [footerPages, setFooterPages] = useState([]);
-  const [legalPages, setLegalPages] = useState([]);
 
-  useEffect(() => {
-    fetch("/api/website/footer")
-      .then((r) => r.json())
-      .then(({ footer, footerPages, legalPages }) => {
-        setFooter(footer ?? {});
-        setFooterPages(footerPages ?? []);
-        setLegalPages(legalPages ?? []);
-      })
-      .catch(() => { });
-  }, []);
+  // Static now — no more fetch
+  const footer = STATIC_FOOTER;
+  const footerPages = STATIC_FOOTER_PAGES;
+  const legalPages = STATIC_LEGAL_PAGES;
+
+  // useEffect(() => {
+  //   fetch("/api/website/footer")
+  //     .then((r) => r.json())
+  //     .then(({ footer, footerPages, legalPages }) => {
+  //       setFooter(footer ?? {});
+  //       setFooterPages(footerPages ?? []);
+  //       setLegalPages(legalPages ?? []);
+  //     })
+  //     .catch(() => { });
+  // }, []);
 
   const theme = dark ? "dark" : "light";
 
