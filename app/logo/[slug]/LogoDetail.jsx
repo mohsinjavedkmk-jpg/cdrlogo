@@ -119,7 +119,7 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                     body: JSON.stringify({ slug }),
                 });
                 const data = await res.json();
-                console.log("[LogoDetail] client fetch → related:", data|| []);
+                console.log("[LogoDetail] client fetch → related:", data || []);
                 setLogo(data.data || data);
                 setRelated(data.related || []);
             } catch (e) { setError(e.message); }
@@ -248,8 +248,8 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
         const entities = Array.isArray(schema?.mainEntity)
             ? schema.mainEntity
             : Array.isArray(schema)
-            ? schema
-            : [];
+                ? schema
+                : [];
         return entities
             .map((item) => {
                 const question = item?.name || item?.question || "";
@@ -608,6 +608,18 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
   [data-theme="dark"] .related-card:hover { box-shadow:0 10px 28px rgba(0,0,0,0.45); }
   .related-img-wrap { width:100%; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; padding:16px; background:repeating-conic-gradient(rgba(128,128,128,0.05) 0% 25%,transparent 0% 50%) 0 0/16px 16px; }
   .related-img-wrap img { width:100%; height:100%; object-fit:contain; }
+  .related-img-wrap img { width:100%; height:100%; object-fit:contain; }
+
+/* NEW — related logo thumbnails render via CSS background-image instead of
+   <img>/<Image>, so Google Images crawler doesn't discover/index them as
+   standalone content images. Purely decorative from a crawler's POV. */
+.related-img-bg {
+  width:100%;
+  height:100%;
+  background-size:contain;
+  background-repeat:no-repeat;
+  background-position:center;
+}
   .related-initials { font-size:22px; font-weight:900; color:var(--muted); letter-spacing:-1px; }
   .related-body { padding:8px 10px 10px; }
   .related-name { font-size:12px; font-weight:700; color:var(--heading); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:4px; }
@@ -723,10 +735,17 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                                 <div className="preview-img-wrap">
                                     {logo.webpUrl
                                         ? <Image
-                                         unoptimized
-                                            fill
-                                            sizes="(max-width: 768px) 90vw, 550px"
-                                            src={logo.webpUrl} alt={logo.altText || `${logo.logoName} logo PNG SVG vector`} draggable={false} onDragStart={e => e.preventDefault()} />
+                                            unoptimized
+                                            src={logo.webpUrl}
+                                            alt={logo.altText || `${logo.logoName} logo PNG SVG vector`}
+                                            width={550}
+                                            height={367}
+                                            priority
+                                            fetchPriority="high"
+                                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                            draggable={false}
+                                            onDragStart={e => e.preventDefault()}
+                                        />
                                         : <div className="preview-img-placeholder" dangerouslySetInnerHTML={{ __html: logo.svgContent || logo.logoName }} />
                                     }
                                     <div className="img-overlay-bar">
@@ -1015,7 +1034,18 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                                         <Link key={rel.slug} href={`/logo/${rel.slug}`} className="related-card">
                                             <div className="related-img-wrap">
                                                 {rel.webpUrl
-                                                    ? <Image  unoptimized sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 150px" src={rel.webpUrl} alt={rel.logoName} width={150} height={150} />
+                                                    ? (
+                                                        // CSS background-image, NOT <Image>/<img> — keeps Google
+                                                        // Images from indexing this thumbnail against this page's
+                                                        // title/URL. Visually identical, still clickable, just not
+                                                        // crawlable as a standalone content image.
+                                                        <div
+                                                            className="related-img-bg"
+                                                            style={{ backgroundImage: `url(${rel.webpUrl})` }}
+                                                            role="img"
+                                                            aria-label={`${rel.logoName || rel.brand} logo`}
+                                                        />
+                                                    )
                                                     : <div className="related-initials">{(rel.brand || rel.logoName)?.slice(0, 2).toUpperCase()}</div>
                                                 }
                                             </div>
@@ -1027,7 +1057,6 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                                                     <span className="rf-tag rf-svg">SVG</span>
                                                     <span className="rf-tag rf-png">PNG</span>
                                                 </div>
-
                                             </div>
                                         </Link>
                                     );
