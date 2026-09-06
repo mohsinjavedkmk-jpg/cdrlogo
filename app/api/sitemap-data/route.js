@@ -29,14 +29,11 @@ export async function GET() {
   )
 ];
 
-  // -------------------------------
-  // STATIC + IMPORTANT ROUTES
-  // -------------------------------
   const staticRoutes = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${baseUrl}/brands`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
-    { url: `${baseUrl}/category`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+    { url: `${baseUrl}/categories`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 }, // ← changed
     { url: `${baseUrl}/template`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${baseUrl}/about-us`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     { url: `${baseUrl}/logos`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
@@ -46,7 +43,7 @@ export async function GET() {
   // CATEGORY ROUTES
   // -------------------------------
   const categoryRoutes = categories.map(cat => ({
-    url: `${baseUrl}/category/${encodeURIComponent(cat.toLowerCase())}`,
+    url: `${baseUrl}/categories/logos/${encodeURIComponent(cat.toLowerCase())}`, // ← changed
     lastModified: new Date(),
     changeFrequency: "daily",
     priority: 0.7,
