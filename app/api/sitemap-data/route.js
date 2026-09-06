@@ -20,14 +20,17 @@ export async function GET() {
   // -------------------------------
   // SAFE CATEGORY EXTRACTION
   // -------------------------------
- const categories = [
-  ...new Set(
-    logos
-      .flatMap(l => Array.isArray(l.category) ? l.category : [])
-      .map(c => String(c).trim().toLowerCase().replace(/\s+/g, "-"))
-      .filter(Boolean)
-  )
-];
+  const excludedCategories = ["template"]; // ← add any slugs you want to exclude here
+
+  const categories = [
+    ...new Set(
+      logos
+        .flatMap(l => Array.isArray(l.category) ? l.category : [])
+        .map(c => String(c).trim().toLowerCase().replace(/\s+/g, "-"))
+        .filter(Boolean)
+        .filter(c => !excludedCategories.includes(c)) // ← excludes "template"
+    )
+  ];
 
   const staticRoutes = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: "daily", priority: 1.0 },
