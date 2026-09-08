@@ -1,7 +1,28 @@
 import { NextResponse } from "next/server";
 
+// ← ADDED: old singular pattern → /category/football
+const OLD_CATEGORY_SINGULAR = /^\/category\/([^/]+)\/?$/;
+// ← ADDED: old plural pattern → /categories/football (but NOT /categories/logos/xxx)
+const OLD_CATEGORY_PLURAL = /^\/categories\/([^/]+)\/?$/;
+
 export async function middleware(req) {
   const { pathname, origin } = req.nextUrl;
+
+  // ← ADDED: 301 redirect block for legacy category URLs
+  const singularMatch = pathname.match(OLD_CATEGORY_SINGULAR);
+  if (singularMatch) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/categories/logos/${singularMatch[1].toLowerCase()}`;
+    return NextResponse.redirect(url, 301);
+  }
+
+  const pluralMatch = pathname.match(OLD_CATEGORY_PLURAL);
+  if (pluralMatch && pluralMatch[1] !== "logos") {
+    const url = req.nextUrl.clone();
+    url.pathname = `/categories/logos/${pluralMatch[1].toLowerCase()}`;
+    return NextResponse.redirect(url, 301);
+  }
+  // ← END ADDED BLOCK
 
   if (pathname === "/sitemap.xml") {
     const res = await fetch(`${origin}/api/sitemap-data`);
@@ -78,5 +99,10 @@ Educational reference library. Logos provided for design reference and learning 
 }
 
 export const config = {
-  matcher: ["/sitemap.xml", "/llms.txt"],
+  matcher: [
+    "/sitemap.xml",
+    "/llms.txt",
+    "/category/:path*",   // ← ADDED
+    "/categories/:path*", // ← ADDED
+  ],
 };
