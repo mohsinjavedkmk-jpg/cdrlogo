@@ -375,7 +375,7 @@ function buildImageObjectSchema({ imageUrl, logoName, brand, canonicalUrl, descr
     "contentUrl": imageUrl,
     "url": imageUrl,
     "name": `${logoName}`,
-  "description": description || `${logoPhrase(logoName)} image on cdrlogo.com`,
+    "description": description || `${logoPhrase(logoName)} image on cdrlogo.com`,
     "representativeOfPage": true,
     ...(brand ? { "creator": { "@type": "Organization", "name": brand } } : {}),
     "mainEntityOfPage": canonicalUrl,
@@ -387,7 +387,7 @@ function buildFaqSchema(faqPairs) {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-  "mainEntity": faqPairs.slice(0, 2).map((qa) => ({
+    "mainEntity": faqPairs.slice(0, 2).map((qa) => ({
       "@type": "Question",
       "name": qa.question || qa.q || "",
       "acceptedAnswer": { "@type": "Answer", "text": qa.answer || qa.a || "" },
@@ -431,9 +431,11 @@ async function findRelatedLogos(logoName) {
 }
 function stripAccents(text) {
   if (!text) return text;
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  // stripMarkdownLinks is a function declaration further down the file —
+  // hoisted, so calling it here before its textual definition is safe.
+  return stripMarkdownLinks(
+    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  );
 }
 
 // returns the name with exactly one trailing "logo", never two
@@ -531,6 +533,7 @@ async function researchBrandFacts(logoName, brand) {
     `${subject} logo history design meaning`,
     `${subject} official brand colors hex code`,
     `${subject} founded headquarters official website`,
+    `${subject} logo redesign year designer typography change`,
   ];
 
   const allResults = [];
@@ -585,11 +588,22 @@ function wordCount(text) {
 }
 
 function isWordCountValid(caseUsed, wc) {
-  if (caseUsed === "A") return wc >= 150 && wc <= 250;
-  if (caseUsed === "B") return wc >= 30 && wc <= 80;
+  if (caseUsed === "A") return wc >= 60 && wc <= 110;
+  if (caseUsed === "B") return wc >= 20 && wc <= 45;
   if (caseUsed === "C") return wc === 0;
   return true; // unknown/unparsed case — don't block on this alone
 }
+
+// Tied to the SIBLING COUNT (i.e. which version number this is), not a hash
+// of the name — this guarantees V1/V2/V3 of the SAME logo always get a
+// different angle in sequence, instead of a hash occasionally assigning
+// the same angle to two versions of the same name by chance.
+const FOCUS_ANGLES = [
+  "Focus on brand identity and what the visual symbol literally depicts — what is drawn, and its documented origin (e.g. family crest, mascot, initials). Do not lead with founding date or colors.",
+  "Focus on the official colors and concrete visual design elements (shape, layout, typography style) — name colors and describe what's visually present. Do not lead with the symbol's origin story.",
+  "Focus on the logo's history and redesign timeline — when it changed, what changed, and why (if documented). Do not lead with colors or the symbol's origin.",
+  "Focus on the company's HQ location, industry, and any documented technical/typography detail — keep the origin story and redesign history to a single short clause at most.",
+];
 
 const OPENING_ANGLES = [
   "Open the description with the founding date and origin story, then move to the logo itself.",
@@ -603,12 +617,130 @@ const CLOSING_VARIANTS = [
   `This page provides the [Logo Phrase] in PNG, SVG, AI, and CDR file formats for research and reference use.`,
   `PNG, SVG, AI, and CDR versions of the [Logo Phrase] are provided here for educational reference.`,
 ];
- 
+
 function pickRotation(logoName, arr) {
   const idx = Math.abs(hashString(logoName)) % arr.length;
   return { value: arr[idx], index: idx };
 }
 
+// Detects which CLOSING_VARIANTS entry a sibling description already used,
+// by matching a distinctive fragment unique to each variant's wording.
+function detectClosingVariantIndex(text) {
+  if (!text) return null;
+  const t = String(text).toLowerCase();
+  if (t.includes("for reference and design purposes")) return 0;
+  if (t.includes("for research and reference use")) return 1;
+  if (t.includes("for educational reference")) return 2;
+  return null;
+}
+
+// Picks the first CLOSING_VARIANTS entry NOT already used by any sibling
+// description. This replaces hashing the full logo name (which can and did
+// collide — e.g. "Nestle Logo V1" and "Nestle Logo V4" both hashing to the
+// same index, producing an identical closing sentence on two pages).
+// Only falls back to a hash once every variant has genuinely been used by
+// a sibling already (i.e. more sibling versions exist than variants).
+function pickClosingVariant(relatedDescriptions, arr) {
+  const used = new Set(
+    relatedDescriptions.map(detectClosingVariantIndex).filter((i) => i !== null)
+  );
+  for (let i = 0; i < arr.length; i++) {
+    if (!used.has(i)) return { value: arr[i], index: i };
+  }
+  const idx = Math.abs(hashString(relatedDescriptions.join("|"))) % arr.length;
+  return { value: arr[idx], index: idx };
+}
+
+// Version-index rotation: siblingCount = how many prior versions already
+// exist for this logo name. Version 1 (no siblings) gets angle 0, version 2
+// gets angle 1, etc., wrapping around. Deterministic and collision-free
+// across the same name's version sequence — unlike hashing the full name
+// (which includes "V2"/"V3" and can coincidentally repeat an angle).
+function pickFocusAngle(siblingCount, arr) {
+  const idx = siblingCount % arr.length;
+  return { value: arr[idx], index: idx };
+}
+
+// ── Color-consistency helper ─────────────────────────────────────────────
+// Extracts known color words mentioned in a text so a new version's
+// description can be forced to match (or explicitly justify diverging
+// from) what prior sibling versions already stated as the official colors.
+const KNOWN_COLOR_WORDS = [
+  "red", "blue", "green", "yellow", "orange", "purple", "pink", "black",
+  "white", "gray", "grey", "brown", "gold", "golden", "silver", "navy",
+  "teal", "maroon", "cyan", "magenta", "beige", "tan", "cream", "burgundy",
+  "turquoise", "violet", "indigo", "crimson", "amber", "charcoal",
+];
+
+function extractColorWords(text) {
+  if (!text) return [];
+  const lower = String(text).toLowerCase();
+  const found = new Set();
+  for (const color of KNOWN_COLOR_WORDS) {
+    if (new RegExp(`\\b${color}\\b`).test(lower)) found.add(color);
+  }
+  return [...found];
+}
+
+// ── Generalized fact-consistency extractors ──────────────────────────────
+// Same principle as extractColorWords: pull a specific, checkable fact out
+// of a sibling description so it can be carried forward as a hard
+// constraint, instead of leaving consistency entirely up to the model
+// re-reading full sibling text. Covers the two contradiction types seen in
+// practice: HQ location drifting (Vevey, Switzerland → Arlington, Virginia)
+// and a historical date drifting (shield removed "1938" → "1868").
+function extractHQLocation(text) {
+  if (!text) return null;
+  const m = String(text).match(
+    /headquarter(?:ed|s)\s+(?:are|is\s+)?(?:located\s+)?in\s+([^.,;]+)/i
+  );
+  return m ? m[1].trim() : null;
+}
+
+function extractFoundingYear(text) {
+  if (!text) return null;
+  const m = String(text).match(/founded\s+(?:in\s+)?(\d{4})/i);
+  return m ? m[1] : null;
+}
+
+// Strips markdown link syntax that occasionally leaks into model output
+// (e.g. "[www.nestle.com](https://www.nestle.com)") down to plain text —
+// these fields render as plain prose, not markdown, so a raw [text](url)
+// pair shows up as broken syntax to a reader.
+function stripMarkdownLinks(text) {
+  if (!text) return text;
+  return String(text).replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$2");
+}
+
+// ── Fluff / mission-narrative filler check ───────────────────────────────
+// These are the phrases that turn a factual description into a marketing
+// mission statement — technically not in BANNED_PHRASES (not promotional),
+// but they're interpretive filler rather than fact and are what makes a
+// short factual brief balloon into a big vague paragraph.
+const FLUFF_PHRASES = [
+  "long-standing connection",
+  "heritage and mission",
+  "closely linked to",
+  "closely tied to",
+  "reflects the company's",
+  "reflects the brand's",
+  "timeless",
+  "beloved",
+  "cherished",
+  "iconic status",
+  "enduring legacy",
+  "rich history",
+  "commitment to",
+];
+
+function containsFluffPhrase(text) {
+  if (!text) return null;
+  const lower = String(text).toLowerCase();
+  for (const phrase of FLUFF_PHRASES) {
+    if (lower.includes(phrase)) return phrase;
+  }
+  return null;
+}
 
 // detects a stray hex/RGB/Pantone code slipping into the description
 function containsColorCode(text) {
@@ -617,6 +749,357 @@ function containsColorCode(text) {
   if (/\brgb\s*\(/i.test(text)) return true;
   if (/\bpantone\s*\d/i.test(text)) return true;
   return false;
+}
+
+// ── FACTS MUST MATCH REAL WEB SEARCH RESULTS ─────────────────────────────
+// Sibling-consistency checks above only verify a fact is CONSISTENT across
+// versions — never that it's actually TRUE per the Tavily research. This
+// closes that gap: any year, color, or HQ token stated in the description
+// must actually appear in contextText, or it's flagged as hallucinated.
+function checkDescriptionAgainstSource(description, contextText) {
+  const reasons = [];
+  if (!description) return reasons;
+  if (!contextText || !contextText.trim()) {
+    if (/\b(19|20)\d{2}\b/.test(description)) {
+      reasons.push("description states a specific year but no research source text exists to verify it against");
+    }
+    return reasons;
+  }
+  const sourceLower = contextText.toLowerCase();
+
+  const yearsInDescription = [...new Set((description.match(/\b(19|20)\d{2}\b/g) || []))];
+  yearsInDescription.forEach((year) => {
+    if (!sourceLower.includes(year)) {
+      reasons.push(`description states the year ${year}, which does not appear in the research source — likely hallucinated`);
+    }
+  });
+
+  // Proximity check, not just presence — a color word appearing ANYWHERE in
+  // noisy multi-source research text (e.g. describing an unrelated
+  // sub-brand's packaging) is not the same as the source actually stating
+  // that color as part of the LOGO/EMBLEM itself. Require the color to
+  // appear within ~120 chars of a logo/color-related keyword.
+  const LOGO_COLOR_CONTEXT_WORDS = /\b(logo|emblem|nest|badge|colou?r|palette|mark|icon)\b/i;
+  const colorsInDescription = extractColorWords(description);
+  colorsInDescription.forEach((color) => {
+    const colorIdx = sourceLower.indexOf(color);
+    if (colorIdx === -1) {
+      reasons.push(`description states the color "${color}", which does not appear anywhere in the research source — likely hallucinated`);
+      return;
+    }
+    const windowStart = Math.max(0, colorIdx - 120);
+    const windowEnd = Math.min(sourceLower.length, colorIdx + color.length + 120);
+    const window = sourceLower.slice(windowStart, windowEnd);
+    if (!LOGO_COLOR_CONTEXT_WORDS.test(window)) {
+      reasons.push(`description states the color "${color}" as part of the logo, but the research source only mentions "${color}" in an unrelated context (not near "logo"/"color"/"emblem") — likely a conflated/hallucinated claim`);
+    }
+  });
+
+  const hqInDescription = extractHQLocation(description);
+  if (hqInDescription) {
+    const firstToken = hqInDescription.split(/[\s,]+/)[0]?.toLowerCase();
+    if (firstToken && firstToken.length > 2 && !sourceLower.includes(firstToken)) {
+      reasons.push(`description states headquarters as "${hqInDescription}", but "${firstToken}" does not appear in the research source — likely hallucinated`);
+    }
+  }
+
+  return reasons;
+}
+// ── LLM SEMANTIC FACT VERIFICATION ────────────────────────────────────────
+// Regex/proximity checks (above) catch the cheap cases fast and for free.
+// This catches what they can't: overclaiming (source supports 2 colors,
+// description states 5), conflating a different entity's fact with this
+// logo's fact, or subtly misstating a documented detail. Runs ONLY for
+// Case A descriptions (the ones with enough claims to be worth the call) —
+// Case B is too short to matter, Case C has no claims to check.
+async function llmVerifyDescriptionFacts(description, contextText) {
+  if (!description || !contextText || !contextText.trim()) return [];
+
+  const prompt = `You are a strict fact-checker. Below is SOURCE TEXT (raw web research, may include unrelated tangents) and a DESCRIPTION that claims to be based only on it.
+
+Your ONLY job: list every specific factual claim in the DESCRIPTION (a date, a color, a location, a count of something, a designer name, a redesign reason) that is NOT clearly and directly supported by the SOURCE TEXT when read in its actual context — including claims that use a real word from the source but apply it to the wrong subject (e.g. source says a sub-brand's packaging is blue, description claims the logo itself is blue).
+
+Do not flag generic non-factual statements (e.g. "the logo is available in PNG and SVG format").
+
+SOURCE TEXT:
+${contextText.slice(0, 6000)}
+
+DESCRIPTION TO CHECK:
+${description}
+
+Return ONLY JSON:
+{ "unsupportedClaims": [ { "claim": "the exact claim", "reason": "why it isn't actually supported" } ] }
+If every claim is properly supported, return { "unsupportedClaims": [] }.`;
+
+  try {
+    const completion = await callOpenAIWithRetry({
+      model: "gpt-4.1-mini",
+      temperature: 0,
+      messages: [
+        { role: "system", content: "You are a strict, conservative fact-checker. You flag overclaiming, conflation, and misattribution — not just missing keywords. Return only JSON." },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw);
+    return (Array.isArray(parsed.unsupportedClaims) ? parsed.unsupportedClaims : [])
+      .map((c) => `LLM fact-check: "${c.claim}" — ${c.reason}`);
+  } catch (err) {
+    console.warn(`  [description:factcheck] LLM verification failed: ${err.message} — falling back to regex-only checks.`);
+    return [];
+  }
+}
+// ── FAQ FACTS MUST MATCH THE DESCRIPTION ─────────────────────────────────
+// The prompt instructs the model to base FAQ claims only on VERIFIED FACTS
+// (the description) — this mechanically verifies it: any year or color an
+// FAQ answer states must also appear in the description text itself.
+function checkFaqAgainstDescription(faqPairs, description) {
+  const reasons = [];
+  if (!Array.isArray(faqPairs) || !faqPairs.length) return reasons;
+  const descLower = (description || "").toLowerCase();
+
+  faqPairs.forEach((qa, i) => {
+    const answer = qa?.answer || "";
+    if (!answer) return;
+
+    const yearsInAnswer = [...new Set((answer.match(/\b(19|20)\d{2}\b/g) || []))];
+    const colorsInAnswer = extractColorWords(answer);
+
+    if (!description) {
+      if (yearsInAnswer.length || colorsInAnswer.length) {
+        reasons.push(`faq[${i}].answer states specific facts (${[...yearsInAnswer, ...colorsInAnswer].join(", ")}) but no description/VERIFIED FACTS exists to support them`);
+      }
+      return;
+    }
+
+    yearsInAnswer.forEach((year) => {
+      if (!descLower.includes(year)) {
+        reasons.push(`faq[${i}].answer states the year ${year}, which is not mentioned in the description — FAQ and description must agree`);
+      }
+    });
+    colorsInAnswer.forEach((color) => {
+      if (!descLower.includes(color)) {
+        reasons.push(`faq[${i}].answer states the color "${color}", which is not mentioned in the description — FAQ and description must agree`);
+      }
+    });
+  });
+
+  return reasons;
+}
+
+// ============================================================================
+// PUBLISH-VALIDATION GATE — implements the "LOGO PAGE CONTENT VERIFICATION
+// SYSTEM" spec (near-duplicate detection, AI-artifact language, empty/
+// placeholder content, internal link validation, final SEO gate, and the
+// retry-limit / Needs Review fallback that wraps all of it).
+// ============================================================================
+
+// ── #1 Duplicate / near-duplicate content check ─────────────────────────────
+// Cheap trigram/Jaccard similarity — good enough to catch "same content,
+// swapped brand name" cases. For true semantic near-duplicates (heavily
+// paraphrased but same meaning) swap this for an embeddings + cosine-
+// similarity check using OpenAI's text-embedding-3-small.
+function trigramSet(text) {
+  const s = String(text || "").toLowerCase().replace(/[^a-z0-9\s]/g, "");
+  const words = s.split(/\s+/).filter(Boolean);
+  const set = new Set();
+  for (let i = 0; i < words.length - 2; i++) set.add(words.slice(i, i + 3).join(" "));
+  return set;
+}
+
+function jaccardSimilarity(a, b) {
+  const A = trigramSet(a);
+  const B = trigramSet(b);
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  for (const t of A) if (B.has(t)) inter++;
+  return inter / (A.size + B.size - inter);
+}
+
+// Returns the highest-similarity match at/above threshold, or null.
+function findNearDuplicate(candidateText, priorTexts, threshold = 0.35) {
+  let best = null;
+  for (const prior of priorTexts) {
+    if (!prior) continue;
+    const score = jaccardSimilarity(candidateText, prior);
+    if (score >= threshold && (!best || score > best.score)) best = { score, prior };
+  }
+  return best;
+}
+
+// ── #3/#4 Remove AI-artifact language ────────────────────────────────────────
+const AI_ARTIFACT_PHRASES = [
+  "based on available information",
+  "the research confirms",
+  "according to the information gathered",
+  "as an ai",
+  "as an ai language model",
+  "i don't have access to",
+  "i do not have access to",
+  "based on the provided",
+  "according to the sources",
+  "the notes indicate",
+  "research notes show",
+  "based on my knowledge",
+  "as of my last update",
+  "i cannot provide",
+];
+
+function containsAIArtifactPhrase(text) {
+  if (!text) return null;
+  const lower = String(text).toLowerCase();
+  for (const phrase of AI_ARTIFACT_PHRASES) {
+    if (lower.includes(phrase)) return phrase;
+  }
+  return null;
+}
+
+// ── #7 Empty / placeholder / incomplete content block ───────────────────────
+function isPlaceholderOrIncomplete(text) {
+  if (!text) return false; // blank is allowed for Case C descriptions — checked separately
+  const trimmed = String(text).trim();
+  if (/lorem ipsum/i.test(trimmed)) return true;
+  if (/\.\.\.$/.test(trimmed)) return true;      // trailing ellipsis = truncated
+  if (!/[.!?"')\]]$/.test(trimmed)) return true; // no terminal punctuation = likely cut off
+  return false;
+}
+
+// ── #9 Internal link validation ──────────────────────────────────────────────
+function extractInternalLinks(text) {
+  if (!text) return [];
+  return text.match(/https?:\/\/(www\.)?cdrlogo\.com\/[^\s")]+/gi) || [];
+}
+
+async function validateInternalLinks(...texts) {
+  const allLinks = texts.flatMap((t) => extractInternalLinks(t));
+  if (!allLinks.length) return [];
+  const broken = [];
+  for (const link of allLinks) {
+    const slugFromLink = link.split("/").filter(Boolean).pop();
+    try {
+      const exists = await prisma.logo.findFirst({
+        where: { slug: slugFromLink },
+        select: { id: true },
+      });
+      if (!exists) broken.push(link);
+    } catch (err) {
+      console.warn(`  [links] Could not verify "${link}": ${err.message}`);
+      broken.push(link);
+    }
+  }
+  return broken;
+}
+
+// ── #10 Final SEO validation before publishing ───────────────────────────────
+function finalSeoGate(aiContent, faqSchema) {
+  const reasons = [];
+
+  if (!aiContent.metaTitle || aiContent.metaTitle.trim().length < 10)
+    reasons.push("meta_title missing or too short");
+  if (!aiContent.metaDescription || aiContent.metaDescription.trim().length < 40)
+    reasons.push("meta_description missing or too short");
+  if (!aiContent.canonicalUrl) reasons.push("missing canonical URL");
+  if (!aiContent.altText) reasons.push("missing alt_text");
+
+  // Visible FAQ must exactly match FAQ schema (same questions, same order).
+  const schemaQuestions = Array.isArray(faqSchema?.mainEntity)
+    ? faqSchema.mainEntity.map((q) => q.name)
+    : [];
+  const visibleQuestions = (aiContent.faqPairs || []).map((q) => q.question);
+  if (JSON.stringify(schemaQuestions) !== JSON.stringify(visibleQuestions)) {
+    reasons.push("visible FAQ does not match FAQ schema");
+  }
+
+  return reasons;
+}
+
+// ── Master publish gate — aggregates every check above (#1, #2, #3/4, #7,
+// #9, #10) into a single pass/fail with a reasons[] audit trail. Called
+// from processOneLogoFolder inside the retry loop (#8). ────────────────────
+async function validateBeforePublish({ aiContent, canonicalUrl, relatedLogos, faqSchema }) {
+  const reasons = [];
+
+  // NEW — scan every generated text field, not just description + FAQ.
+  const artifactFields = {
+    meta_title: aiContent.metaTitle,
+    meta_description: aiContent.metaDescription,
+    alt_text: aiContent.altText,
+    og_title: aiContent.ogTitle,
+    og_description: aiContent.ogDescription,
+    twitter_title: aiContent.twitterTitle,
+    twitter_description: aiContent.twitterDescription,
+    image_object_description: aiContent.imageObjectDescription,
+  };
+  for (const [field, value] of Object.entries(artifactFields)) {
+    const hit = containsAIArtifactPhrase(value);
+    if (hit) reasons.push(`${field} contains unnatural AI phrase: "${hit}" — must read as natural human-written content`);
+  }
+
+  // #7 — empty/placeholder FAQ or missing FAQ entirely
+  if (!Array.isArray(aiContent.faqPairs) || aiContent.faqPairs.length !== 2) {
+    reasons.push(`faq must contain exactly 2 items, found ${aiContent.faqPairs?.length ?? 0}`);
+  } else {
+    aiContent.faqPairs.forEach((qa, i) => {
+      if (!qa?.question || !qa?.answer) reasons.push(`faq[${i}] has an empty question or answer`);
+      if (isPlaceholderOrIncomplete(qa?.answer)) reasons.push(`faq[${i}].answer looks incomplete or placeholder text`);
+      const artifact = containsAIArtifactPhrase(qa?.answer);
+      if (artifact) reasons.push(`faq[${i}].answer contains AI-artifact phrase: "${artifact}"`);
+    });
+  }
+
+  // description: Case C blank is fine; if non-blank it must not be placeholder/incomplete
+  if (aiContent.description && isPlaceholderOrIncomplete(aiContent.description)) {
+    reasons.push("description looks incomplete or placeholder text");
+  }
+  const descArtifact = containsAIArtifactPhrase(aiContent.description);
+  if (descArtifact) reasons.push(`description contains AI-artifact phrase: "${descArtifact}"`);
+
+  // #1 — near-duplicate description vs sibling pages (same brand, different version)
+  if (aiContent.description) {
+    const priorDescriptions = (relatedLogos || []).map((r) => r.description).filter(Boolean);
+    const dup = findNearDuplicate(aiContent.description, priorDescriptions);
+    if (dup) {
+      reasons.push(`description is a near-duplicate (${(dup.score * 100).toFixed(0)}% similar) of an existing related page's description`);
+    }
+  }
+
+  // #1 — near-duplicate FAQ answers vs sibling pages
+  if (Array.isArray(aiContent.faqPairs)) {
+    const priorAnswers = (relatedLogos || [])
+      .flatMap((r) => (Array.isArray(r?.faqSchema?.mainEntity) ? r.faqSchema.mainEntity.map((q) => q?.acceptedAnswer?.text) : []))
+      .filter(Boolean);
+    aiContent.faqPairs.forEach((qa, i) => {
+      const dup = findNearDuplicate(qa?.answer, priorAnswers);
+      if (dup) reasons.push(`faq[${i}].answer is a near-duplicate (${(dup.score * 100).toFixed(0)}% similar) of an existing related page's FAQ answer`);
+    });
+  }
+
+  // #2 — facts-must-match-source: if description is blank (Case C / no
+  // verified facts), FAQ answers must not smuggle in specific factual claims.
+  if (!aiContent.description) {
+    const FACT_CLAIM_WORDS = /\b(founded|redesigned|headquartered|designer|colou?r|shield|star|mascot|typeface|font)\b/i;
+    (aiContent.faqPairs || []).forEach((qa, i) => {
+      if (FACT_CLAIM_WORDS.test(qa?.answer || "")) {
+        reasons.push(`faq[${i}].answer states a specific fact but no VERIFIED FACTS/description exists to support it`);
+      }
+    });
+  }
+
+    // NEW — mechanical FAQ-vs-description fact agreement (actual values, not just keyword presence)
+  reasons.push(...checkFaqAgainstDescription(aiContent.faqPairs, aiContent.description));
+
+  // #9 — internal link validation across description + all FAQ answers
+  const brokenLinks = await validateInternalLinks(
+    aiContent.description,
+    ...(aiContent.faqPairs || []).map((q) => q.answer)
+  );
+  brokenLinks.forEach((link) => reasons.push(`internal link does not resolve to an existing page: ${link}`));
+
+  // #10 — final SEO gate (title/meta/canonical/alt present, visible FAQ == schema)
+  reasons.push(...finalSeoGate({ ...aiContent, canonicalUrl }, faqSchema));
+
+  return { passed: reasons.length === 0, reasons };
 }
 
 async function generateMainDescription({
@@ -633,18 +1116,66 @@ async function generateMainDescription({
 
   const { hasResults, contextText } = await researchBrandFacts(logoName, brand);
 
-  // #3 — rotating opening angle, deterministic per logoName
-  const opening = pickRotation(logoName, OPENING_ANGLES);
-  // #4 — rotating closing sentence template
-  const closing = pickRotation(logoName, CLOSING_VARIANTS);
- const closingSentenceForPrompt = closing.value.replace(/\[Logo Phrase\]/g, logoPhrase(logoName));
+  // FOCUS ANGLE: tied to how many sibling versions already exist, not a
+  // hash of the name. Guarantees V1 → angle 0, V2 → angle 1, V3 → angle 2,
+  // etc. — a deterministic sequence instead of a hash that could
+  // (and did, in practice) assign the same angle to two versions of the
+  // same logo by coincidence.
+  const focus = pickFocusAngle(relatedDescriptions.length, FOCUS_ANGLES);
+  // Closing sentence: pick the first variant not already used by a sibling
+  // version, instead of hashing the full name (which can collide across
+  // versions — see pickClosingVariant comment above).
+  const closing = pickClosingVariant(relatedDescriptions, CLOSING_VARIANTS);
+  const closingSentenceForPrompt = closing.value.replace(/\[Logo Phrase\]/g, logoPhrase(logoName));
 
-  // #5 — sibling/variant awareness block
+  // Color-consistency: carry forward whatever colors sibling versions
+  // already stated as official, so this version doesn't silently state a
+  // different color set for what is supposedly the same logo.
+  const priorColorSets = relatedDescriptions.map(extractColorWords).filter((c) => c.length);
+  const allPriorColors = [...new Set(priorColorSets.flat())];
+  const colorConsistencyNote = allPriorColors.length
+    ? `\n\nPREVIOUSLY STATED OFFICIAL COLORS for this same logo/brand (from sibling versions): ${allPriorColors.join(", ")}.
+COLOR RULE: Unless the research notes explicitly state the colors changed for THIS version, use this exact same color list — do not add a color that isn't in this list, and do not drop one that is, just for variety. Color facts must stay consistent across all versions of the same logo unless a documented change justifies a difference.
+Also: state the color list ONCE. Do not describe colors twice with different framing in the same description (e.g. "rendered primarily in brown and blue" in one sentence, then a separate sentence listing all five official colors) — that reads as self-contradictory about how many colors are actually primary.`
+    : "";
+
+  // HQ-location consistency: same mechanism as colors, generalized to the
+  // headquarters fact — this is what should have prevented "Vevey,
+  // Switzerland" on one version and "Arlington, Virginia, USA" on another
+  // for the same global brand.
+  const priorHQCandidates = relatedDescriptions.map(extractHQLocation).filter(Boolean);
+  const priorHQ = priorHQCandidates[0] || null;
+  const hqConsistencyNote = priorHQ
+    ? `\n\nPREVIOUSLY STATED HEADQUARTERS LOCATION for this same logo/brand: "${priorHQ}".
+HQ RULE: Unless the research notes explicitly document the company relocating its global headquarters, you must state this exact same location — never a different city, region, or country (e.g. do not confuse a regional/national subsidiary's office with the parent company's actual headquarters).`
+    : "";
+
+  // Founding-year consistency: same mechanism, for the founding date fact.
+  const priorFoundingYearCandidates = relatedDescriptions.map(extractFoundingYear).filter(Boolean);
+  const priorFoundingYear = priorFoundingYearCandidates[0] || null;
+  const foundingYearConsistencyNote = priorFoundingYear
+    ? `\n\nPREVIOUSLY STATED FOUNDING YEAR for this same logo/brand: ${priorFoundingYear}. Use this exact year if you mention founding — never state a different year.`
+    : "";
+
+  // #5 — sibling/variant awareness block. Pass EVERY existing description
+  // for this same logo name (not just the first 3, not truncated) so the
+  // model can see exactly which real facts have already been used and is
+  // pushed to surface *different* verified facts from the research notes —
+  // not just reworded sentences around the same facts. This is what
+  // actually prevents "V2 says the same founding date and colors as V1,
+  // just in different words."
   const variantNote = relatedDescriptions.length
-    ? `\n\nPREVIOUS VERSION DESCRIPTIONS ALREADY PUBLISHED ON THIS SITE FOR RELATED PAGES (do NOT copy or closely mirror their sentence structure, opening line, or phrasing — this description must read differently from all of them, even though the underlying facts may overlap):\n${relatedDescriptions
-        .slice(0, 3)
-        .map((d, i) => `v${i + 1}: ${String(d).slice(0, 220)}${String(d).length > 220 ? "..." : ""}`)
-        .join("\n")}`
+    ? `\n\nPREVIOUS VERSION DESCRIPTIONS ALREADY PUBLISHED ON THIS SITE FOR RELATED PAGES OF THE SAME LOGO/BRAND (${relatedDescriptions.length} total — read ALL of them before writing):\n${relatedDescriptions
+      .map((d, i) => `v${i + 1}: ${String(d)}`)
+      .join("\n\n")}
+
+MANDATORY DIFFERENTIATION RULE (read carefully):
+1. First, identify which specific real facts (founding date, redesign date, designer, HQ location, specific colors named, typography style, symbolism described, etc.) each version above ALREADY covers.
+2. Your description must NOT just reword or re-report the same facts in different sentences. If the research notes support additional genuine facts that the versions above did NOT mention (e.g. they covered founding date and colors, but the notes also mention a redesign year, a designer name, or HQ city that they left out), prioritize and lead with THOSE facts instead.
+3. If — and only if — the research notes genuinely contain no additional facts beyond what's already covered above, it is acceptable to cover the same facts, but you MUST still write with a completely different structure, opening, and emphasis (see FOCUS INSTRUCTION below). Never invent a new fact just to appear different — accuracy always outranks differentiation.
+4. Do NOT copy or closely mirror any previous version's sentence structure, opening line, or phrasing, even when covering overlapping facts.
+5. SYNONYM-SWAP IS NOT DIFFERENTIATION. If you must restate a fact a sibling version already stated (e.g. a redesign date, a design change), do not just substitute synonyms into the same sentence shape (e.g. "removed in 1938, placing emphasis on..." vs "removed in 1938, to emphasize..." is the SAME sentence and will be rejected). Instead: combine that fact into a different sentence alongside a different neighboring fact, change which clause is the main clause vs. subordinate clause, or state it with a different sentence structure entirely (e.g. as a relative clause, a separate short sentence, or folded into another sentence) — not a word-for-word template with synonyms swapped in.
+6. NEVER DRIFT ON A FACT ALREADY ESTABLISHED. Any specific factual detail already stated by a sibling version above — a date, a count (e.g. how many figures/chicks/stars are depicted), a location, a name — must be reused exactly as stated in those versions, unless YOUR research notes explicitly document a verified correction or change. Do not restate a different number, date, or location for what is supposed to be the same underlying fact just for variety — that is a factual error, not differentiation, and will make the pages contradict each other.${colorConsistencyNote}${hqConsistencyNote}${foundingYearConsistencyNote}`
     : "";
 
   const systemPrompt = `You are a careful research writer producing the "About This Logo" description for a logo reference page. You never invent facts. You only use what is explicitly supported by the research notes given to you. If the notes don't support a fact, you leave it out rather than guessing. Return ONLY valid JSON, no markdown, no commentary.`;
@@ -670,7 +1201,7 @@ Read the research notes above. Decide honestly which case applies:
 
 CASE A — SUBSTANTIAL VERIFIABLE HISTORY:
 The notes contain genuine, verifiable facts about founding date, logo history/redesign dates, designer, symbolism, official colors, typography, HQ location, or official website.
-→ Write a description between 150 and 250 words (THIS IS A HARD LIMIT — count your words before finishing; if you go over 250 or under 150, trim or expand before returning). Include as much of the verified facts as you can, but never pad with invented detail:
+→ Write a SHORT, FACTS-ONLY description between 60 and 110 words (THIS IS A HARD LIMIT — count your words before finishing; if you go over 110 or under 60, trim or expand before returning). Every sentence should state one distinct fact — do not pad with interpretation, mission-narrative, or filler sentences. Cover only as many of the following as the research notes support AND as fit within the word limit, prioritized by the FOCUS INSTRUCTION below:
   * Founding date (exact date if available)
   * Logo history — when the current logo launched, and change dates if it changed
   * Reason for redesign if publicly documented (rebrand, merger, sponsorship change)
@@ -686,7 +1217,7 @@ The notes contain genuine, verifiable facts about founding date, logo history/re
 
 CASE B — BRAND IS REAL/IDENTIFIABLE BUT NOTES ARE THIN:
 The notes only confirm the brand/logo name is real (or barely touch on it) but do not support real history, dates, designer, or colors.
-→ Write a SHORT description between 30 and 80 words (HARD LIMIT — count before returning), including only:
+→ Write a SHORT, FACTS-ONLY description between 20 and 45 words (HARD LIMIT — count before returning), including only:
   * Brand/logo name
   * Official website, ONLY if the RESEARCH NOTES themselves confirm one — never guess, and never use the INTERNAL PAGE URL
   * State it's official/original ONLY if verifiable — otherwise omit that claim entirely
@@ -699,13 +1230,15 @@ The notes are empty, irrelevant, or the logo appears to be a custom, local, temp
 → Return an empty string "" for description. Do not write generic filler. Do not guess.
 
 STEP 2 — WRITING STYLE (applies to CASE A and CASE B only)
+* FACTS ONLY. This is a short factual brief, not an essay. State facts plainly — no scene-setting, no narrative framing, no interpretive sentences about what the brand "means" to customers or how it "reflects" heritage, mission, or care, unless the research notes state that interpretation as a documented fact (e.g. a designer explicitly said so).
+* Do not use filler phrases like "long-standing connection," "reflects the company's heritage," "closely tied to," "timeless," "beloved," "rich history," or "commitment to" — these are opinions, not facts, and they're what turns a short brief into a bloated paragraph.
+* Keep it SHORT: Case A is 60–110 words, Case B is 20–45 words. Every sentence should carry a distinct fact — if a sentence doesn't add a new fact, cut it.
 * Natural, simple, human English — not stiff AI phrasing. Avoid words like "showcases," "underscores," "facilitates," "embodies."
-* Mix short and long sentences.
 * Never copy or closely paraphrase source wording — rewrite completely in your own words.
 * This description must not follow a generic templated skeleton — write it the way a person would actually write it for this specific logo.
 * Always insert a space after every sentence-ending period, question mark, or exclamation mark.
-* OPENING INSTRUCTION (follow this for how you START the description): ${opening.value}
-  Do NOT default to "[Name] was founded on [date]..." as the first sentence unless the opening instruction above tells you to.
+* FOCUS INSTRUCTION (follow this for what you EMPHASIZE and lead with): ${focus.value}
+  Do NOT default to "[Name] was founded on [date]..." as the first sentence unless the focus instruction above tells you to lead with founding/origin.
 
 NO UNSOURCED INTERPRETATION:
 Never state what a shape, color, or design "symbolizes," "represents," "reflects," "highlights," or "embodies" unless the research notes explicitly say so. Do not invent meaning about strength, leadership, ambition, tradition, or heritage. If the notes don't explain what something means, just describe what is literally visible (e.g. "the emblem includes two cherries inside a shield outline") without interpreting it.
@@ -733,6 +1266,10 @@ This page is an educational reference archive, never a download page or marketpl
 inviting the reader to obtain, get, or download anything.
 Also never mention "cdrlogo.com," any other website domain of this archive, or any URL — the only URL
 that may appear is the brand's own official website, and only when the research notes confirm it.
+Also never use interpretive/mission-narrative filler: "long-standing connection," "heritage and mission,"
+"closely linked to," "closely tied to," "reflects the company's/brand's," "timeless," "beloved," "cherished,"
+"iconic status," "enduring legacy," "rich history," "commitment to." These are opinions, not facts — state
+only what the research notes document.
 
 STEP 4 — ACCURACY RULE (NON-NEGOTIABLE)
 Never state a fact not supported by the research notes above. If you are unsure, leave it out. A short, honest description is always better than a longer one with invented facts. If in doubt between Case A/B/C, choose the more conservative case.
@@ -770,7 +1307,7 @@ Return ONLY this JSON:
 
     const caseUsed = parsed.case || "?";
     const description = fixMissingSpaceAfterPeriod(
-      (parsed.description && String(parsed.description).trim()) || ""
+      stripMarkdownLinks((parsed.description && String(parsed.description).trim()) || "")
     );
     return { caseUsed, description };
   }
@@ -791,22 +1328,53 @@ Return ONLY this JSON:
     const missingEducationalPhraseB =
       caseUsed === "B" && !!description && !hasEducationalPhrase(description);
 
+    // #3/#4 — unnatural AI-artifact phrases ("Based on available information...", etc.)
+    const aiArtifactHit = containsAIArtifactPhrase(description);
+
+    // facts-only requirement — interpretive/mission-narrative filler
+    const fluffHit = containsFluffPhrase(description);
+
+    // #1 — near-duplicate vs sibling versions of the same logo (e.g. V1 vs V2
+    // must read differently, not just swap a word here and there)
+    const nearDupHit = description ? findNearDuplicate(description, relatedDescriptions) : null;
+
+    const newHQ = extractHQLocation(description);
+    const hqMismatch = !!(priorHQ && newHQ && newHQ.toLowerCase() !== priorHQ.toLowerCase());
+    const newFoundingYear = extractFoundingYear(description);
+    const foundingYearMismatch = !!(priorFoundingYear && newFoundingYear && newFoundingYear !== priorFoundingYear);
+
+      // Regex/proximity grounding check (fast, free, catches the obvious cases)
+    const sourceGroundingIssues = checkDescriptionAgainstSource(description, hasResults ? contextText : "");
+    // LLM semantic fact-check (catches overclaiming/conflation regex can't) —
+    // only worth the call for Case A, where there's enough factual density
+    // for conflation to actually happen.
+    const llmFactIssues = caseUsed === "A" && hasResults
+      ? await llmVerifyDescriptionFacts(description, contextText)
+      : [];
+    const allGroundingIssues = [...sourceGroundingIssues, ...llmFactIssues];
+
     if (
       description &&
-      (bannedHit || colorCodeHit || leakedInternalUrl || wordCountBad || missingEducationalPhraseB)
+      (bannedHit || colorCodeHit || leakedInternalUrl || wordCountBad || missingEducationalPhraseB || aiArtifactHit || fluffHit || nearDupHit || hqMismatch || foundingYearMismatch || sourceGroundingIssues.length)
     ) {
       const reasonParts = [];
       if (bannedHit) reasonParts.push(`it used the banned phrase "${bannedHit}"`);
       if (colorCodeHit) reasonParts.push(`it included a hex/RGB/Pantone color code, which is not allowed — colors must be described by name only`);
       if (leakedInternalUrl) reasonParts.push(`it incorrectly mentioned the internal archive URL/domain instead of a verified brand website (or none at all)`);
-      if (wordCountBad) reasonParts.push(`it was ${wc} words, which is outside the required range for Case ${caseUsed} (Case A needs 150–250 words, Case B needs 30–80 words)`);
+      if (wordCountBad) reasonParts.push(`it was ${wc} words, which is outside the required range for Case ${caseUsed} (Case A needs 60–110 words, Case B needs 20–45 words) — this is a short factual brief, not an essay`);
       if (missingEducationalPhraseB) reasonParts.push(`it is Case B but is missing the required "educational use" / "reference use" / "research purposes" phrase`);
+      if (aiArtifactHit) reasonParts.push(`it used the unnatural AI phrase "${aiArtifactHit}" — write like a human researcher, not a model describing its own process`);
+      if (fluffHit) reasonParts.push(`it used the interpretive/filler phrase "${fluffHit}" — state facts only, cut mission-narrative language`);
+      if (nearDupHit) reasonParts.push(`it is too similar (${(nearDupHit.score * 100).toFixed(0)}% overlap) to a previously published description for a related version of this same logo — it must use different sentence structure and phrasing, not just swap a word`);
+      if (hqMismatch) reasonParts.push(`it stated the headquarters as "${newHQ}" but a sibling version of this same logo already established it as "${priorHQ}" — this is a factual contradiction, not a valid new fact`);
+      if (foundingYearMismatch) reasonParts.push(`it stated the founding year as ${newFoundingYear} but a sibling version already established ${priorFoundingYear} — this is a factual contradiction`);
+       allGroundingIssues.forEach((r) => reasonParts.push(r));   // NEW
 
       const reason = reasonParts.join("; and ");
       console.warn(`  [description] Regenerating once — ${reason}.`);
 
       const retry = await runDescriptionCall(
-        `Your previous JSON response was rejected because ${reason}. Regenerate the ENTIRE JSON response, fixing this issue precisely. Pay special attention to: the exact word-count range for the case you choose (count your words before returning), the STEP 3 banned-words list, the "Official colors — name them only, never hex/RGB/Pantone" rule, the internal-URL rule, and — if Case B — including the required educational/reference/research phrase.`
+        `Your previous JSON response was rejected because ${reason}. Regenerate the ENTIRE JSON response, fixing this issue precisely. Pay special attention to: the exact word-count range for the case you choose (count your words before returning — keep it short and factual), the STEP 3 banned-words list, cutting any interpretive/mission-narrative filler, the "Official colors — name them only, never hex/RGB/Pantone" rule, the internal-URL rule, writing in natural human prose with no meta-commentary about your own research process, and — if Case B — including the required educational/reference/research phrase. If a near-duplicate issue was flagged, rewrite with an entirely different sentence structure and opening from the previous version. If a headquarters or founding-year mismatch was flagged, use EXACTLY the previously established value — do not restate a different location or year.`
       );
       caseUsed = retry.caseUsed;
       description = retry.description;
@@ -819,8 +1387,20 @@ Return ONLY this JSON:
       const stillWc = wordCount(description);
       const stillWordCountBad = !!description && !isWordCountValid(caseUsed, stillWc);
       const stillMissingEduB = caseUsed === "B" && !!description && !hasEducationalPhrase(description);
+      const stillAIArtifact = containsAIArtifactPhrase(description);
+      const stillFluff = containsFluffPhrase(description);
+      const stillNearDup = description ? findNearDuplicate(description, relatedDescriptions) : null;
+      const stillNewHQ = extractHQLocation(description);
+      const stillHqMismatch = !!(priorHQ && stillNewHQ && stillNewHQ.toLowerCase() !== priorHQ.toLowerCase());
+           const stillNewFoundingYear = extractFoundingYear(description);
+      const stillFoundingYearMismatch = !!(priorFoundingYear && stillNewFoundingYear && stillNewFoundingYear !== priorFoundingYear);
+      const stillSourceGroundingIssues = checkDescriptionAgainstSource(description, hasResults ? contextText : "");
+      const stillLlmFactIssues = caseUsed === "A" && hasResults
+        ? await llmVerifyDescriptionFacts(description, contextText)
+        : [];
+      const stillAllGroundingIssues = [...stillSourceGroundingIssues, ...stillLlmFactIssues];
 
-      if (description && (stillBanned || stillColorCode || stillLeaked || stillWordCountBad || stillMissingEduB)) {
+      if (description && (stillBanned || stillColorCode || stillLeaked || stillWordCountBad || stillMissingEduB || stillAIArtifact || stillFluff || stillNearDup || stillHqMismatch || stillFoundingYearMismatch || stillAllGroundingIssues.length)) {
         console.warn(`  [description] Still failing validation after retry — leaving blank.`);
         description = "";
         caseUsed = "C";
@@ -828,7 +1408,7 @@ Return ONLY this JSON:
     }
 
     console.log(
-      `  [description] Case ${caseUsed} — ${description ? `${wordCount(description)} words` : "BLANK"} | opening#${opening.index} closing#${closing.index}`
+      `  [description] Case ${caseUsed} — ${description ? `${wordCount(description)} words` : "BLANK"} | focus#${focus.index} closing#${closing.index}`
     );
 
     return description;
@@ -1200,6 +1780,19 @@ async function generateAIContent({
       })
     : [];
 
+  // Sibling FAQ answers (not just questions) — used to steer new FAQ
+  // answers away from restating the same facts already published for a
+  // related version of this same logo.
+  const usedFaqAnswers = isVariant
+    ? relatedLogos
+      .flatMap((r) => {
+        const mainEntity = r?.faqSchema?.mainEntity;
+        return Array.isArray(mainEntity)
+          ? mainEntity.map((q) => q?.acceptedAnswer?.text).filter(Boolean)
+          : [];
+      })
+    : [];
+
   // ── System prompt (shared) ────────────────────────────────────────────────
   const brandFactsBlock = isTemplate
     ? `NOTE: This logo has NO confirmed real-world brand, company, country, or industry on record. Do NOT invent one. Refer only to the Logo Name and the file formats — never to "the brand" or "the company" as a stand-in subject.`
@@ -1391,10 +1984,10 @@ Any color/symbol/shape claim must match VERIFIED FACTS above — do not introduc
 
 STRICTLY FORBIDDEN: commercial projects, business use, branding needs, marketing language`;
 
-const altTextRule = isTemplate
-  ? `Return EXACTLY: "${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com"
+  const altTextRule = isTemplate
+    ? `Return EXACTLY: "${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com"
 DO NOT DEVIATE. DO NOT ADD WORDS. DO NOT use the word "brand".`
-  : `Return EXACTLY: "${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com"
+    : `Return EXACTLY: "${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com"
 DO NOT DEVIATE. DO NOT ADD WORDS.`;
 
   const ogDescriptionRule = isTemplate
@@ -1446,10 +2039,10 @@ STRICTLY FORBIDDEN: Free, Download, marketing language.`;
 - If you are not near-certain, return "".
 - Never fabricate a domain that "looks right" (e.g. guessing brandname.com without verifying it's correct).`;
 
-const noVerifiedFacts = !description;
-const faqPoolForThisLogo = getFaqPool(isTemplate || noVerifiedFacts, logoName);
+  const noVerifiedFacts = !description;
+  const faqPoolForThisLogo = getFaqPool(isTemplate || noVerifiedFacts, logoName);
 
-const faqSection = `--------------------------------------------------
+  const faqSection = `--------------------------------------------------
 faq (1 to 4 Q&A PAIRS — VARIABLE, NEVER A FIXED NUMBER)
 --------------------------------------------------
 
@@ -1474,13 +2067,16 @@ technical questions together in the same FAQ.
 QUESTION POOL${(isTemplate || noVerifiedFacts) ? " (website_format_technical category only — no verified brand facts exist)" : " (all 9 categories — brand_identity_symbolism, colors, shape_design_concept, typography_structure, style_personality, recognizability_practical, history, country_city_industry_context, website_format_technical)"}:
 ${faqPoolForThisLogo.map((q) => `- ${q}`).join("\n")}
 ${usedFaqQuestions.length ? `\nPREVIOUSLY USED FAQ QUESTIONS on related pages (choose DIFFERENT questions where possible — avoid repeating these verbatim):\n${usedFaqQuestions.map((q) => `- "${q}"`).join("\n")}` : ""}
+${usedFaqAnswers.length ? `\nPREVIOUSLY PUBLISHED FAQ ANSWERS on related pages for this same logo (do not restate the same fact in a new answer just because the question differs — if the underlying fact is already covered below, and VERIFIED FACTS supports a different fact, use that instead):\n${usedFaqAnswers.map((a, i) => `- v${i + 1}: "${String(a)}"`).join("\n")}` : ""}
 
 STEP 3 — WRITING ANSWERS
 - Every answer must naturally include the specific brand/logo name.
-- Base every color/symbol/shape/letter/mascot claim STRICTLY on the VERIFIED
-  FACTS block above — never on what you personally think the logo looks
-  like, and never a generic answer that could apply to any logo in this
-  category.
+- Base every color/symbol/shape/letter/mascot/date/designer/history claim
+  STRICTLY on sentences that actually appear in the VERIFIED FACTS
+  description above — not on the raw research notes, not on general
+  knowledge, and never on what you personally think the logo looks like.
+  If you cannot point to the specific sentence in VERIFIED FACTS that
+  supports a claim, do not make that claim.
 - If VERIFIED FACTS does not contain what's needed to answer a candidate
   question (e.g. it never mentions a color, letter, or symbol), do NOT pick
   that question — choose a different question from the pool instead of
@@ -1742,8 +2338,8 @@ VERIFIED FACTS):
     `${logoName} — PNG SVG vector file on cdrlogo.com`;
   const metaDescription = stripAccents(parsed.meta_description) ||
     `${logoName}  available in PNG, SVG and vector format for educational use and research purposes. Reference archive on cdrlogo.com.`;
-const altText = stripAccents(parsed.alt_text) ||
-  `${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com`;
+  const altText = stripAccents(parsed.alt_text) ||
+    `${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com`;
   const tags = Array.isArray(parsed.tags) && parsed.tags.length
     ? parsed.tags.map(t => stripAccents(String(t)))
     : [logoName, "PNG", "SVG", "vector", "cdrlogo.com"];
@@ -1758,7 +2354,7 @@ const altText = stripAccents(parsed.alt_text) ||
     `${logoName} in PNG and SVG vector format for educational reference and research use.`;
   const imageObjectDescription = stripAccents(parsed.image_object_description) ||
     `${logoName} image on cdrlogo.com`;
-const faqPairs = (Array.isArray(parsed.faq) ? parsed.faq : []).slice(0, 2);
+  const faqPairs = (Array.isArray(parsed.faq) ? parsed.faq : []).slice(0, 2);
 
   // ── Post-generation validation logging (not blocking, but visible) ───────
   const violations = validateAIContent(
@@ -1816,17 +2412,49 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     const canonicalUrl = stripTrailingSlash(`https://www.cdrlogo.com/logo/${finalSlug}`);
     console.log(`  [slug] ${finalSlug}`);
 
-    // ── Step B: AI content generation ────────────────────────────────────────
+    // ── Step B: AI content generation, gated by the publish-validation
+    // system (#1 near-dup, #2 facts-must-match-source, #3/4 AI-artifact
+    // language, #7 empty/placeholder, #9 internal links, #10 final SEO).
+    // Bounded retry loop: max 2–3 full regenerations. If it still fails
+    // after that, the page is NOT force-published — it's flagged
+    // "Needs Review" for manual admin review instead (#8). ────────────────
     const isManualTemplate =
       sharedFields.category.toLowerCase().trim() === "template" ||
       /\btemplate\b/i.test(finalLogoName);
 
-    const aiContent = await generateAIContent({
-      logoName: stripSpecialChars(finalLogoName),
-      isManualTemplate,
-      relatedLogos: related,
-      canonicalUrl,
-    });
+    const MAX_VALIDATION_RETRIES = 2; // → up to 3 total attempts
+    let aiContent = null;
+    let faqSchemaForValidation = {};
+    let validation = { passed: false, reasons: ["not yet generated"] };
+
+    for (let attempt = 0; attempt <= MAX_VALIDATION_RETRIES; attempt++) {
+      aiContent = await generateAIContent({
+        logoName: stripSpecialChars(finalLogoName),
+        isManualTemplate,
+        relatedLogos: related,
+        canonicalUrl,
+      });
+
+      faqSchemaForValidation = buildFaqSchema(aiContent.faqPairs);
+
+      validation = await validateBeforePublish({
+        aiContent,
+        canonicalUrl,
+        relatedLogos: related,
+        faqSchema: faqSchemaForValidation,
+      });
+
+      if (validation.passed) {
+        console.log(`  [publish-validate] ✓ Passed on attempt ${attempt + 1}/${MAX_VALIDATION_RETRIES + 1}`);
+        break;
+      }
+      console.warn(`  [publish-validate] ✗ Attempt ${attempt + 1}/${MAX_VALIDATION_RETRIES + 1} failed:\n    - ${validation.reasons.join("\n    - ")}`);
+    }
+
+    const needsReview = !validation.passed;
+    if (needsReview) {
+      console.warn(`  [publish-validate] Exhausted retries — marking "Needs Review" instead of force-publishing. Reasons:\n    - ${validation.reasons.join("\n    - ")}`);
+    }
 
     console.log(`  [ai] main: "${aiContent.mainCategory}" | sub: "${aiContent.subCategory}" | brand: "${aiContent.brand || "(none — template)"}" | website: "${aiContent.website || "(none)"}" | country: "${aiContent.country || "(none)"}" | industry: "${aiContent.industry || "(none)"}"`);
     console.log(`  [ai] metaTitle (${aiContent.metaTitle.length} chars): "${aiContent.metaTitle.substring(0, 60)}"`);
@@ -1926,9 +2554,13 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       canonicalUrl,
     });
 
-    const faqSchema = buildFaqSchema(aiContent.faqPairs);
+    // Reuse the exact schema object that was checked in validateBeforePublish
+    // (finalSeoGate's "visible FAQ === FAQ schema" check) rather than
+    // rebuilding it here — rebuilding risks silent drift if faqPairs logic
+    // ever changes between the two call sites.
+    const faqSchema = faqSchemaForValidation;
 
-    console.log(`  [schema] imageObject: ${Object.keys(imageObjectSchema).length ? "built" : "empty"} | breadcrumb: built | faq: ${faqSchema.length} question(s)`);
+    console.log(`  [schema] imageObject: ${Object.keys(imageObjectSchema).length ? "built" : "empty"} | breadcrumb: built | faq: ${Object.keys(faqSchema).length ? "built" : "empty"}`);
 
     // ── Step F: save to DB ────────────────────────────────────────────────────
     const logo = await prisma.logo.create({
@@ -1948,7 +2580,16 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
         description: aiContent.description,
         tags: aiContent.tags,
         brandColors: sharedFields.brandColors,
-        publishStatus: sharedFields.publishStatus,
+        // Never force-publish content that failed the validation gate after
+        // retries — override to "Needs Review" regardless of what the
+        // upload form requested, so an admin has to look at it (#8).
+        publishStatus: needsReview ? "Needs Review" : sharedFields.publishStatus,
+        // NOTE: requires a Prisma schema migration adding these two fields
+        // to the Logo model:
+        //   validationStatus  String   @default("published") // "published" | "needs_review"
+        //   validationReasons String[] @default([])
+        validationStatus: needsReview ? "needs_review" : "published",
+        validationReasons: validation.reasons,
         downloadCount: sharedFields.downloadCount,
         svgUrl,
         pngUrl,
@@ -1998,6 +2639,8 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       canonicalUrl,
       ogImageUrl,
       id: logo.id,
+      needsReview,
+      validationReasons: validation.reasons,
     };
 
   } catch (err) {

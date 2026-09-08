@@ -4,9 +4,9 @@ const collectionSchema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   name: "Creative Logo Concept & Template Library",
-  url: "https://www.cdrlogo.com/templates",
+  url: "https://www.cdrlogo.com/template",
   description:
-    "An independent educational library of original logo concepts, design templates, and creative experiments in AI, CDR, SVG, and PNG formats for design research and learning.",
+    "An independent educational library of original logo concepts, design template, and creative experiments in AI, CDR, SVG, and PNG formats for design research and learning.",
   isPartOf: {
     "@type": "WebSite",
     name: "CDRLogo",
@@ -19,7 +19,7 @@ const breadcrumbSchema = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Home", item: "https://www.cdrlogo.com" },
-    { "@type": "ListItem", position: 2, name: "Templates", item: "https://www.cdrlogo.com/templates" },
+    { "@type": "ListItem", position: 2, name: "Templates", item: "https://www.cdrlogo.com/template" },
   ],
 };
 
@@ -27,13 +27,13 @@ export async function generateMetadata() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.cdrlogo.com";
   const title = "Logo Templates & Design Concepts | AI, CDR, SVG, PNG - CDRLogo";
   const description =
-    "Browse an educational library of original logo concepts and design templates. Download AI, CDR, SVG, and PNG reference files for design research, learning, and visual inspiration.";
+    "Browse an educational library of original logo concepts and design template. Download AI, CDR, SVG, and PNG reference files for design research, learning, and visual inspiration.";
   const image = `${baseUrl}/og-image.jpg`;
 
   return {
     title,
     description,
-    alternates: { canonical: `${baseUrl}/templates` },
+    alternates: { canonical: `${baseUrl}/template` },
     robots: {
       index: true,
       follow: true,
@@ -42,7 +42,7 @@ export async function generateMetadata() {
     openGraph: {
       title,
       description,
-      url: `${baseUrl}/templates`,
+      url: `${baseUrl}/template`,
       siteName: "CDRLogo",
       type: "website",
       images: [

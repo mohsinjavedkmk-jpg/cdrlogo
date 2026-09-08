@@ -9,7 +9,7 @@ datasource db {
 
 model Logo {
   id          String  @id @default(uuid())
-  owner       String?  @default("admin")
+  owner       String? @default("admin")
   favoritedBy User[]  @relation("UserFavorites")
   // ── Core identity ──────────────────────────────────────────────────────────
   logoName    String
@@ -72,6 +72,9 @@ model Logo {
   imageObjectSchema Json? @default("{}")
   breadcrumbSchema  Json? @default("{}")
   faqSchema         Json  @default("[]")
+
+  validationStatus  String?
+  validationReasons String[]
 
   // ── Publishing ─────────────────────────────────────────────────────────────
   publishStatus String @default("Draft")

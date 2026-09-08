@@ -119,6 +119,8 @@ export const LogoScalarFieldEnum = {
   imageObjectSchema: 'imageObjectSchema',
   breadcrumbSchema: 'breadcrumbSchema',
   faqSchema: 'faqSchema',
+  validationStatus: 'validationStatus',
+  validationReasons: 'validationReasons',
   publishStatus: 'publishStatus',
   downloadCount: 'downloadCount',
   downloadedNumberByPeople: 'downloadedNumberByPeople',
