@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-// ← ADDED: old singular pattern → /category/football
+// Old singular pattern → /category/football
 const OLD_CATEGORY_SINGULAR = /^\/category\/([^/]+)\/?$/;
-// ← ADDED: old plural pattern → /categories/football (but NOT /categories/logos/xxx)
+// Old plural pattern → /categories/football (but NOT /categories/logos/xxx)
 const OLD_CATEGORY_PLURAL = /^\/categories\/([^/]+)\/?$/;
 
 export async function middleware(req) {
   const { pathname, origin } = req.nextUrl;
 
-  // ← ADDED: 301 redirect block for legacy category URLs
+  // ---- 301 redirects for legacy category URLs ----
   const singularMatch = pathname.match(OLD_CATEGORY_SINGULAR);
   if (singularMatch) {
     const url = req.nextUrl.clone();
@@ -22,10 +22,10 @@ export async function middleware(req) {
     url.pathname = `/categories/logos/${pluralMatch[1].toLowerCase()}`;
     return NextResponse.redirect(url, 301);
   }
-  // ← END ADDED BLOCK
+  // ---- END redirect block ----
 
   if (pathname === "/sitemap.xml") {
-    const res = await fetch(`${origin}/api/sitemap-data`);
+    const res = await fetch(`https://www.cdrlogo.com/api/sitemap-data`);
     const routes = await res.json();
 
     const escapeXml = (str) =>
@@ -102,7 +102,7 @@ export const config = {
   matcher: [
     "/sitemap.xml",
     "/llms.txt",
-    "/category/:path*",   // ← ADDED
-    "/categories/:path*", // ← ADDED
+    "/category/:path*",
+    "/categories/:path*",
   ],
 };
