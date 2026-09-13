@@ -43,6 +43,13 @@ export async function POST(req) {
           publishStatus: true,
           downloadCount: true,
 
+          // ← NEW: needed so the admin panel can show WHY a logo needs
+          // review (populated by the upload pipeline's validateBeforePublish
+          // gate) — without these the "Needs Review" section has no way to
+          // explain itself to the admin.
+          validationStatus: true,
+          validationReasons: true,
+
           // SEO — for edit modal pre-fill
           metaTitle: true,
           metaDescription: true,
@@ -119,6 +126,15 @@ export async function PATCH(req) {
       // ✅ Optional: type fixes
       if (data.downloadCount !== undefined) {
         data.downloadCount = String(data.downloadCount);
+      }
+
+      // ← NEW: when an admin manually approves/edits a "Needs Review" logo
+      // by changing its status away from "Needs Review", clear the
+      // validation flags so it stops showing in the Needs Review section
+      // and doesn't carry stale reasons forward.
+      if (data.publishStatus !== undefined && data.publishStatus !== "Needs Review") {
+        data.validationStatus = "published";
+        data.validationReasons = [];
       }
 
       if (Object.keys(data).length === 0) {

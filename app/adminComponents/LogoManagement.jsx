@@ -8,6 +8,9 @@ const PER_PAGE = 10;
 const STATUS_CFG = {
   Published: { bg: "rgba(34,197,94,0.15)", border: "rgba(34,197,94,0.35)", color: "#4ade80" },
   Draft: { bg: "rgba(100,116,139,0.15)", border: "rgba(100,116,139,0.3)", color: "#94a3b8" },
+  // ← NEW: distinct amber styling so a "Needs Review" logo is visually
+  // unmistakable from a normal Draft in any shared view.
+  "Needs Review": { bg: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.35)", color: "#fbbf24" },
 };
 
 function StatusBadge({ status }) {
@@ -139,6 +142,12 @@ function EditModal({ logo, dark, onClose, onSave, categories = [] }) {
   // Category options — blank "select" option first, then API list
   const categoryOptions = ["", ...categories];
 
+  // ← NEW: normalized array of reasons this logo was flagged for review,
+  // shown read-only so the admin knows exactly what to fix before
+  // approving it (no need to dig through server logs).
+  const reviewReasons = Array.isArray(logo.validationReasons) ? logo.validationReasons : [];
+  const isNeedsReview = logo.publishStatus === "Needs Review";
+
   return (
     <div
       style={{
@@ -176,6 +185,24 @@ function EditModal({ logo, dark, onClose, onSave, categories = [] }) {
         {/* Scrollable body */}
         <div style={{ overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 22 }}>
 
+          {/* ← NEW: Needs Review reasons block — shown only when relevant */}
+          {isNeedsReview && (
+            <div>
+              <SectionLabel label="Why This Needs Review" border={border} muted={muted} />
+              {reviewReasons.length > 0 ? (
+                <ul style={{
+                  margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 6,
+                  fontSize: 12, lineHeight: 1.5,
+                  color: dark ? "#fcd34d" : "#b45309",
+                }}>
+                  {reviewReasons.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              ) : (
+                <div style={{ fontSize: 12, color: muted }}>No specific reasons recorded.</div>
+              )}
+            </div>
+          )}
+
           {/* Core Info */}
           <div>
             <SectionLabel label="Core Info" border={border} muted={muted} />
@@ -195,7 +222,10 @@ function EditModal({ logo, dark, onClose, onSave, categories = [] }) {
           <div>
             <SectionLabel label="Publishing" border={border} muted={muted} />
             <TwoCol>
-              <Field label="STATUS" k="publishStatus" {...fieldProps} options={["Published", "Draft"]} />
+              {/* ← NEW: "Needs Review" added as a selectable status so an
+                  admin can explicitly move a logo back into review if
+                  needed, not just forward out of it. */}
+              <Field label="STATUS" k="publishStatus" {...fieldProps} options={["Published", "Draft", "Needs Review"]} />
               <Field label="DOWNLOAD LIMIT" k="downloadCount" {...fieldProps} />
             </TwoCol>
           </div>
@@ -347,7 +377,15 @@ function buildPages(tot, cur) {
 
 const COLS = "52px 1fr 130px 100px 100px 130px 90px";
 
-// ── One status section (Published or Draft) — owns its own fetch/pagination ──
+// ← NEW: per-status badge tint for the section header count, extended to
+// cover "Needs Review" alongside the existing Published/Draft looks.
+const SECTION_BADGE_CFG = {
+  Published: { bg: "rgba(34,197,94,0.1)", border: "rgba(34,197,94,0.25)", color: "#4ade80" },
+  Draft: { bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.25)", color: "#94a3b8" },
+  "Needs Review": { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.3)", color: "#fbbf24" },
+};
+
+// ── One status section (Published, Draft, or Needs Review) — owns its own fetch/pagination ──
 function LogoSection({
   title, status, dark, search, categoryFilter, refreshSignal,
   onCategoriesLoaded, onEdit, onDelete, onStatusToggled,
@@ -364,10 +402,7 @@ function LogoSection({
   const text = dark ? "#e2e8f0" : "#1e293b";
   const muted = dark ? "#64748b" : "#94a3b8";
   const headClr = dark ? "#475569" : "#94a3b8";
-  const rowHoverBg = dark ? "#141924" : "#FFFFFF";
-  const badgeBg = status === "Published" ? "rgba(34,197,94,0.1)" : "rgba(100,116,139,0.12)";
-  const badgeBorder = status === "Published" ? "rgba(34,197,94,0.25)" : "rgba(100,116,139,0.25)";
-  const badgeColor = status === "Published" ? "#4ade80" : "#94a3b8";
+  const badgeCfg = SECTION_BADGE_CFG[status] ?? SECTION_BADGE_CFG.Draft;
 
   const fetchLogos = useCallback(async () => {
     setLoading(true); setError(null);
@@ -408,7 +443,7 @@ function LogoSection({
         </h2>
         <span style={{
           padding: "2px 9px", borderRadius: 100, fontSize: 11, fontWeight: 700,
-          background: badgeBg, border: `1px solid ${badgeBorder}`, color: badgeColor,
+          background: badgeCfg.bg, border: `1px solid ${badgeCfg.border}`, color: badgeCfg.color,
         }}>{loading ? "…" : total}</span>
       </div>
 
@@ -490,6 +525,18 @@ function LogoSection({
                   fontSize: 11, color: muted, marginTop: 1,
                   overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>{logo.slug}</div>
+              )}
+              {/* ← NEW: quick inline preview of the first review reason,
+                  so an admin scanning the Needs Review table doesn't have
+                  to open every row to get a sense of what's wrong. */}
+              {status === "Needs Review" && Array.isArray(logo.validationReasons) && logo.validationReasons.length > 0 && (
+                <div style={{
+                  fontSize: 10.5, color: dark ? "#fbbf24" : "#b45309", marginTop: 2,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }} title={logo.validationReasons.join(" | ")}>
+                  ⚠ {logo.validationReasons[0]}
+                  {logo.validationReasons.length > 1 ? ` (+${logo.validationReasons.length - 1} more)` : ""}
+                </div>
               )}
             </div>
 
@@ -609,7 +656,7 @@ export default function LogoManagement({ dark = true }) {
   const [editLogo, setEditLogo] = useState(null);
   const [deleteLogo, setDeleteLogo] = useState(null);
   // Bumped whenever data changes in a way that could move a logo between
-  // sections (status toggle, edit, delete) so both sections refetch.
+  // sections (status toggle, edit, delete) so all sections refetch.
   const [refreshSignal, setRefreshSignal] = useState(0);
   const debounceRef = useRef(null);
 
@@ -630,8 +677,15 @@ export default function LogoManagement({ dark = true }) {
     setCategories((prev) => (prev.length > 0 ? prev : Array.from(new Set(cats))));
   }, []);
 
+  // ← UPDATED: a "Needs Review" logo's badge-click now approves it straight
+  // to Published (the most common admin action after reviewing), instead
+  // of falling into the old two-way Published<->Draft toggle which had no
+  // defined behavior for a third status.
   const handleStatusToggle = async (logo) => {
-    const next = logo.publishStatus === "Published" ? "Draft" : "Published";
+    const next =
+      logo.publishStatus === "Published" ? "Draft" :
+      logo.publishStatus === "Needs Review" ? "Published" :
+      "Published";
     try {
       const res = await fetch(`/api/logo/admin`, {
         method: "PATCH",
@@ -678,12 +732,12 @@ export default function LogoManagement({ dark = true }) {
               Logo Management
             </h1>
             <p style={{ margin: "2px 0 0", fontSize: 12, color: muted }}>
-              Published and draft logos, split by status
+              Published, draft, and needs-review logos, split by status
             </p>
           </div>
         </div>
 
-        {/* Filter bar (applies to both sections) */}
+        {/* Filter bar (applies to all sections) */}
         <div style={{
           background: surface, border: `1px solid ${border}`, borderRadius: 12,
           padding: "12px 14px", marginBottom: 20,
@@ -730,6 +784,23 @@ export default function LogoManagement({ dark = true }) {
             >Clear</button>
           )}
         </div>
+
+        {/* ← NEW: Needs Review section rendered FIRST so it's the most
+            visible/urgent thing an admin sees when opening this page —
+            these are logos the pipeline explicitly flagged as needing a
+            human before they can go live or be trusted as Draft content. */}
+        <LogoSection
+          title="Needs Review"
+          status="Needs Review"
+          dark={dark}
+          search={debouncedQ}
+          categoryFilter={categoryFilter}
+          refreshSignal={refreshSignal}
+          onCategoriesLoaded={handleCategoriesLoaded}
+          onEdit={setEditLogo}
+          onDelete={setDeleteLogo}
+          onStatusToggled={handleStatusToggle}
+        />
 
         <LogoSection
           title="Published"

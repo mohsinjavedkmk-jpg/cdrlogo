@@ -5,6 +5,23 @@ import { Upload, X, BarChart2, Globe, CheckCircle, XCircle, Loader2, Package } f
 
 const COLORS_INIT = ["#3B82F6", "#1E3A5F", "#FBFAFC"];
 
+// ── Safe JSON parsing ──────────────────────────────────────────────
+// Prevents "Unexpected token '<', <!DOCTYPE...' is not valid JSON" crashes.
+// If the server 500s / crashes before returning JSON (Next.js sends an
+// HTML error page in that case), this surfaces a clear, readable error
+// instead of a raw JSON-parse exception.
+async function safeJson(res) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(
+      res.ok
+        ? "Server returned an unexpected non-JSON response."
+        : `Server error (${res.status}): ${text.slice(0, 200)}`
+    );
+  }
+}
 
 export default function BulkUploadLogo({ dark }) {
   const fileInputRef = useRef(null);
@@ -34,9 +51,9 @@ export default function BulkUploadLogo({ dark }) {
         // const res = await fetch("/api/catageory/home");
         // const data = await res.json();
         // if (data?.success) {
-         
+
         // }
-         setCategories([]);
+        setCategories([]);
       } catch (err) {
         console.error("Failed to load categories", err);
       }
@@ -127,7 +144,7 @@ export default function BulkUploadLogo({ dark }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: wrapperFile.name }),
       });
-      const { url, key } = await presignRes.json();
+      const { url, key } = await safeJson(presignRes);
       if (!url) throw new Error("Failed to get upload URL.");
 
       // Step 2: poora zip ek hi baar R2 pe (direct, Vercel ko touch nahi karta)
@@ -144,7 +161,7 @@ export default function BulkUploadLogo({ dark }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
-      const listData = await listRes.json();
+      const listData = await safeJson(listRes);
       const folders = listData.folders || [];
       if (folders.length === 0) throw new Error("No logo folders found in ZIP.");
 
@@ -164,22 +181,33 @@ export default function BulkUploadLogo({ dark }) {
           total: folders.length,
         });
 
-        const res = await fetch("/api/logo/upload/bulk", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            key,
-            folderName,
-            category,
-            license,
-            publishStatus,
-            downloadCount: dlUnlimited ? "unlimited" : String(dlCount),
-            brandColors: colors,
-          }),
-        });
-        const data = await res.json();
+        // Per-folder isolation: if ONE folder's request crashes/500s/times
+        // out, don't let it abort the whole batch — record it as a failed
+        // result and move on to the next folder.
+        let data;
+        try {
+          const res = await fetch("/api/logo/upload/bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              key,
+              folderName,
+              category,
+              license,
+              publishStatus,
+              downloadCount: dlUnlimited ? "unlimited" : String(dlCount),
+              brandColors: colors,
+            }),
+          });
+          data = await safeJson(res);
+          if (!(res.ok && data.success)) {
+            data = { ...data, success: false, logoName: data.logoName || folderName };
+          }
+        } catch (err) {
+          data = { success: false, logoName: folderName, error: err.message };
+        }
 
-        if (res.ok && data.success) successCount++;
+        if (data.success) successCount++;
         else failCount++;
 
         allResults.push(data);
@@ -411,11 +439,11 @@ export default function BulkUploadLogo({ dark }) {
               </select>
             </div>
 
-          
+
           </div>
         </div>
 
-      
+
         {/* ── Result Banner ── */}
         {submitResult && (
           <div style={{
@@ -476,6 +504,22 @@ export default function BulkUploadLogo({ dark }) {
                         <p style={{ margin: "2px 0 0", fontSize: 11, color: muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {r.success ? `/${r.slug}` : r.error}
                         </p>
+                        {r.descriptionNeedsDraft && (
+                          <p style={{
+                            margin: "4px 0 0", fontSize: 11, fontWeight: 700,
+                            color: "#f59e0b", display: "flex", alignItems: "center", gap: 5,
+                          }}>
+                            ⚠ Saved as Draft — no verified facts found, description needs manual review
+                          </p>
+                        )}
+                        {r.needsReview && (
+                          <p style={{
+                            margin: "4px 0 0", fontSize: 11, fontWeight: 700,
+                            color: "#f59e0b", display: "flex", alignItems: "center", gap: 5,
+                          }}>
+                            ⚠ Needs Review — validation failed after retries, admin must check before publishing
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
