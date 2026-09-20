@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
+import { toSearchSlug } from "../../utils/searchSlug";
 
 const PAGE_SIZE = 12;
 
@@ -34,10 +35,10 @@ function LogoCard({ logo }) {
     const [imgErr, setImgErr] = useState(false);
     const colors = Array.isArray(logo.brandColors) ? logo.brandColors : [];
     const formats = ["SVG", "PNG", "AI", "CDR"];
-    const router = useRouter(); 
+    const router = useRouter();
 
     return (
-        <div className="logo-card"  onClick={() => router.push(`/logo/${logo.slug}`)}  >
+        <div className="logo-card" onClick={() => router.push(`/logo/${logo.slug}`)}  >
             <div className="card-image">
                 {!imgErr && logo.webpUrl ? (
                     <img src={logo.webpUrl} alt={logo.logoName}
@@ -126,27 +127,27 @@ export default function SearchPage() {
         if (rawQuery) doSearch(rawQuery);
     }, []);  // eslint-disable-line
 
-useEffect(() => {
-    if (isFirstRender.current) {
-        isFirstRender.current = false;
-        return;
-    }
-
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-        const q = inputVal.trim().toLowerCase();
-        if (q) {
-            const slug = q.replace(/\s+/g, "-");
-            router.replace(`/search/${encodeURIComponent(slug)}`);
-            doSearch(q);
-        } else {
-            setAllLogos([]);
-            setLastQuery("");
+    useEffect(() => {
+        if (isFirstRender.current) {
+            isFirstRender.current = false;
+            return;
         }
-    }, 2000);   // ← 300 se 3000 (3 second)
 
-    return () => clearTimeout(debounceRef.current);
-}, [inputVal, doSearch, router]);
+        clearTimeout(debounceRef.current);
+        debounceRef.current = setTimeout(() => {
+            const slug = toSearchSlug(inputVal);
+            if (slug) {
+                const q = inputVal.trim().toLowerCase().replace(/\s+/g, " ");
+                router.replace(`/search/${encodeURIComponent(slug)}`);
+                doSearch(q);
+            } else {
+                setAllLogos([]);
+                setLastQuery("");
+            }
+        }, 2000);
+
+        return () => clearTimeout(debounceRef.current);
+    }, [inputVal, doSearch, router]);
 
     // Paginate in JS when allLogos or page changes
     useEffect(() => {
@@ -157,10 +158,10 @@ useEffect(() => {
 
     const handleSubmit = (e) => {
         e?.preventDefault();
-        const q = inputVal.trim().toLowerCase();
-        if (!q) return;
-        clearTimeout(debounceRef.current); // manual submit pe pending debounce cancel
-        const slug = q.replace(/\s+/g, "-");
+        const slug = toSearchSlug(inputVal);
+        if (!slug) return;
+        clearTimeout(debounceRef.current);
+        const q = inputVal.trim().toLowerCase().replace(/\s+/g, " ");
         router.push(`/search/${encodeURIComponent(slug)}`);
         doSearch(q);
     };
@@ -168,7 +169,7 @@ useEffect(() => {
     const handleKeyDown = (e) => {
         if (e.key === "Enter") handleSubmit();
     };
-    
+
 
     return (
         <>

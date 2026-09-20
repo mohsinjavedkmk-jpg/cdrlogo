@@ -1,11 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
 // app/api/logo/fetch/slug/route.js
-// Returns the full logo record (all schema fields) + up-to-24 related logos.
-// ─────────────────────────────────────────────────────────────────────────────
 import { prisma } from "../../../../lib/prisma";
 
-const MIN_RELATED = 12;
-const MAX_RELATED = 24;
+const MAX_RELATED = 6;
+const CANDIDATE_POOL = 300;
+
+const norm = (v) => String(v || "").trim().toLowerCase();
 
 export async function POST(req) {
   try {
@@ -14,219 +13,98 @@ export async function POST(req) {
       return Response.json({ success: false, error: "Slug is required" }, { status: 400 });
     }
 
-
-
     const logo = await prisma.logo.findUnique({
       where: { slug },
       select: {
-        // ── Core identity ───────────────────────────────────────────────────
-        id: true,
-        logoName: true,
-        slug: true,
-        brand: true,
-        website: true,
-
-        // ── Classification ──────────────────────────────────────────────────
-        category: true,
-        industry: true,
-        country: true,
-        license: true,
-
-        // ── Content ─────────────────────────────────────────────────────────
-        description: true,
-        history: true,
-
-        // ── Taxonomy ────────────────────────────────────────────────────────
-        tags: true,
-
-        // ── File URLs ───────────────────────────────────────────────────────
-        webpUrl: true,   // public CDN preview
-        svgUrl: true,
-        pngUrl: true,
-        aiUrl: true,
-        cdrUrl: true,
-
-        // ── File sizes ──────────────────────────────────────────────────────
-        svgfilesize: true,
-        pngfilesize: true,
-        aifilesize: true,
-        cdrfilesize: true,
-
-        // ── SVG source ──────────────────────────────────────────────────────
+        id: true, logoName: true, slug: true, brand: true, website: true,
+        category: true, industry: true, country: true, license: true,
+        description: true, history: true, tags: true,
+        webpUrl: true, svgUrl: true, pngUrl: true, aiUrl: true, cdrUrl: true,
+        svgfilesize: true, pngfilesize: true, aifilesize: true, cdrfilesize: true,
         svgContent: true,
-
-        // ── Core SEO ────────────────────────────────────────────────────────
-        metaTitle: true,
-        metaDescription: true,
-        altText: true,
-
-        // ── Extended SEO: canonical + OG + Twitter ──────────────────────────
-        canonicalUrl: true,
-        ogTitle: true,
-        ogDescription: true,
-        ogImageUrl: true,
-        ogType: true,
-        twitterTitle: true,
-        twitterDescription: true,
-        twitterImage: true,
-        twitterCardType: true,
-
-        // ── Publishing ──────────────────────────────────────────────────────
+        metaTitle: true, metaDescription: true, altText: true,
+        canonicalUrl: true, ogTitle: true, ogDescription: true, ogImageUrl: true, ogType: true,
+        twitterTitle: true, twitterDescription: true, twitterImage: true, twitterCardType: true,
         publishStatus: true,
-
-        imageObjectSchema: true,
-        breadcrumbSchema: true,
-        faqSchema: true,
+        imageObjectSchema: true, breadcrumbSchema: true, faqSchema: true,
         downloadedNumberByPeople: true,
-        // ── Timestamps ──────────────────────────────────────────────────────
-        createdAt: true,
-        updatedAt: true,
+        createdAt: true, updatedAt: true,
       },
     });
 
     if (!logo) {
-      console.log(`[fetch/slug] ✗ no logo found for slug "${slug}"`);
       return Response.json({ success: false, error: "Logo not found" }, { status: 404 });
     }
 
-    console.log(
-      `[fetch/slug] ✓ found logo: id=${logo.id} brand="${logo.brand}" category=${JSON.stringify(
-        logo.category
-      )} tags=${JSON.stringify(logo.tags)}`
-    );
+    const logoCategories = (Array.isArray(logo.category) ? logo.category : []).filter(Boolean);
+    const logoTags = (Array.isArray(logo.tags) ? logo.tags : []).map(norm);
+    const normCategories = logoCategories.map(norm);
+    const ownBrandKey = norm(logo.brand || logo.logoName);
 
-    const published = { in: ["published", "Published"] };
-    const logoTags = Array.isArray(logo.tags) ? logo.tags : [];
-    const logoCategories = Array.isArray(logo.category) ? logo.category : [];
+    let related = [];
 
-    // ── Related: 1. same brand (case-insensitive) ───────────────────────────
-    const byName = logo.brand
-      ? await prisma.logo.findMany({
-        where: {
-          brand: { equals: logo.brand, mode: "insensitive" }, // ← fuzzy/case-insensitive fix
-          slug: { not: slug },
-          publishStatus: published,
-        },
-        select: {
-          slug: true, logoName: true, brand: true,
-          webpUrl: true,
-        },
-        take: MAX_RELATED,
-        orderBy: { downloadedNumberByPeople: "desc" },
-      })
-      : [];
-
-    console.log(
-      `[fetch/slug] step 1 (same brand, case-insensitive): matched ${byName.length} → ${byName
-        .map((l) => l.slug)
-        .join(", ") || "(none)"}`
-    );
-
-    const usedSlugs = new Set(byName.map((l) => l.slug));
-
-    // ── Related: 2. overlapping category (hasSome, not exact-array equals) ──
-    const rem1 = MAX_RELATED - byName.length;
-    const byCategory =
-      rem1 > 0 && logoCategories.length > 0
-        ? await prisma.logo.findMany({
-          where: {
-            category: { hasSome: logoCategories }, // ← fixed: any overlap, not exact array match
-            slug: { not: slug },
-            publishStatus: published,
-            NOT: { slug: { in: [...usedSlugs] } },
-          },
-          select: {
-            slug: true, logoName: true, brand: true,
-            webpUrl: true,
-          },
-          take: rem1,
-          orderBy: { downloadedNumberByPeople: "desc" },
-        })
-        : [];
-
-    console.log(
-      `[fetch/slug] step 2 (overlapping category, hasSome): matched ${byCategory.length} → ${byCategory
-        .map((l) => l.slug)
-        .join(", ") || "(none)"}`
-    );
-
-    byCategory.forEach((l) => usedSlugs.add(l.slug));
-
-    // ── Related: 3. overlapping tags (case-insensitive fuzzy compare) ───────
-    const rem2 = MAX_RELATED - byName.length - byCategory.length;
-    let byTags = [];
-    if (rem2 > 0 && logoTags.length > 0) {
+    if (logoCategories.length > 0) {
+      // 1) Candidate pool: same category, published, has thumbnail
       const candidates = await prisma.logo.findMany({
         where: {
           slug: { not: slug },
-          publishStatus: published,
-          NOT: { slug: { in: [...usedSlugs] } },
+          publishStatus: { in: ["published", "Published"] },
+          category: { hasSome: logoCategories },
+          webpUrl: { not: null },
         },
         select: {
           slug: true, logoName: true, brand: true,
-          webpUrl: true,
-          tags: true,
+          webpUrl: true, category: true, tags: true,
         },
         orderBy: { downloadedNumberByPeople: "desc" },
-        take: rem2 * 10,
+        take: CANDIDATE_POOL,
       });
 
-      const normLogoTags = logoTags.map((t) => String(t).trim().toLowerCase());
-
-      byTags = candidates
-        .filter((l) => {
-          const candidateTags = (Array.isArray(l.tags) ? l.tags : []).map((t) =>
-            String(t).trim().toLowerCase()
-          );
-          return candidateTags.some((t) => normLogoTags.includes(t)); // ← fuzzy/case-insensitive tag match
+      // 2) Score: more shared categories first, then shared tags.
+      //    (DB order = downloads desc, and sort() is stable, so it stays the tiebreaker)
+      const scored = candidates
+        .map((c) => {
+          const cCats = (Array.isArray(c.category) ? c.category : []).map(norm);
+          const cTags = (Array.isArray(c.tags) ? c.tags : []).map(norm);
+          return {
+            ...c,
+            _catScore: cCats.filter((x) => normCategories.includes(x)).length,
+            _tagScore: cTags.filter((x) => logoTags.includes(x)).length,
+          };
         })
-        .slice(0, rem2);
+        .sort((a, b) => b._catScore - a._catScore || b._tagScore - a._tagScore);
+
+      // 3) Strict filters + one card per brand
+      const seenBrands = new Set([ownBrandKey]); // skips own brand's other variants too
+      const seenSlugs = new Set([slug]);
+      const seenThumbs = new Set();
+
+      for (const c of scored) {
+        if (related.length >= MAX_RELATED) break;
+
+        const brandKey = norm(c.brand || c.logoName);
+        const thumb = String(c.webpUrl || "").trim();
+
+        if (!brandKey || !thumb) continue;                              // no brand / no thumbnail
+        if (!thumb.toLowerCase().includes(norm(c.slug))) continue;      // thumbnail ↔ slug mismatch
+        if (seenBrands.has(brandKey)) continue;                         // same brand already shown
+        if (seenSlugs.has(c.slug)) continue;                            // duplicate card
+        if (seenThumbs.has(thumb)) continue;                            // duplicate thumbnail
+
+        seenBrands.add(brandKey);
+        seenSlugs.add(c.slug);
+        seenThumbs.add(thumb);
+
+        related.push({
+          slug: c.slug,
+          logoName: c.logoName,
+          brand: c.brand,
+          webpUrl: c.webpUrl,
+        });
+      }
     }
 
-    console.log(
-      `[fetch/slug] step 3 (overlapping tags, case-insensitive): matched ${byTags.length} → ${byTags
-        .map((l) => l.slug)
-        .join(", ") || "(none)"}`
-    );
-
-    byTags.forEach((l) => usedSlugs.add(l.slug));
-
-    let related = [...byName, ...byCategory, ...byTags];
-
-    // ── Related: 4. fallback fill — top up to MIN_RELATED if still short ────
-    const rem3 = MIN_RELATED - related.length;
-    let byFallback = [];
-    if (rem3 > 0) {
-      byFallback = await prisma.logo.findMany({
-        where: {
-          slug: { not: slug },
-          publishStatus: published,
-          NOT: { slug: { in: [...usedSlugs] } },
-        },
-        select: {
-          slug: true, logoName: true, brand: true,
-          webpUrl: true,
-        },
-        take: rem3,
-        orderBy: { downloadedNumberByPeople: "desc" },
-      });
-
-      console.log(
-        `[fetch/slug] step 4 (fallback fill to reach ${MIN_RELATED}): matched ${byFallback.length} → ${byFallback
-          .map((l) => l.slug)
-          .join(", ") || "(none)"}`
-      );
-
-      related = [...related, ...byFallback];
-    }
-
-    console.log(
-      `[fetch/slug] ── total related: ${related.length}/${MAX_RELATED} (min target ${MIN_RELATED}) → ${related
-        .map((l) => l.slug)
-        .join(", ") || "(none)"
-      }\n`
-    );
-
+    // No fallback fill on purpose: if fewer than 6 relevant brands exist, show fewer.
     return Response.json({ success: true, data: logo, related });
   } catch (err) {
     console.error("[fetch/slug] ✗ ERROR:", err);

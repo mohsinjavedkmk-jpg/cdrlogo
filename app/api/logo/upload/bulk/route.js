@@ -276,20 +276,11 @@ const PLACEHOLDER_BRAND_PATTERN = /\b(by brand|the brand|this brand|a brand|bran
 // validation — so output stays natural and fact-grounded instead of
 // collapsing into a hardcoded sentence.
 //
-// FIX: color-count-sensitive checks (per-color match against visualFacts)
-// were hard-blocking every attempt on multi-color logos like TCS (6 colors
-// = 6 chances to fail one check). These are now soft/logged only. Attempts
-// increased 2 → 3, and every rejection reason is now logged individually
-// so failures are diagnosable instead of silently falling to the static
-// template.
 async function generateFallbackDescriptionViaLLM({
   logoName, brand, website, country, industry, contextText, hasResults,
   canonicalUrl, relatedDescriptions = [], visualFacts = null,
 }) {
   const subject = brand || logoName;
-  const phrase = logoPhrase(logoName);
-  const closing = pickClosingVariant(relatedDescriptions, CLOSING_VARIANTS, logoName);
-  const closingSentenceForPrompt = closing.value.replace(/\[Logo Phrase\]/g, phrase);
 
   const siblingBlock = relatedDescriptions.length
     ? `\n\nPREVIOUSLY PUBLISHED DESCRIPTIONS FOR RELATED VERSIONS OF THIS SAME LOGO (write something that reads clearly differently from ALL of these — different opening, different structure, different sentence order; reuse an already-established fact like HQ or founding year if relevant, but never reuse sentence phrasing):\n${relatedDescriptions
@@ -316,9 +307,8 @@ HARD RULES:
 - Never open with "[Name] is the brand associated with this logo," "[Name] is the company behind this logo," "This logo represents [Name]," or any similarly generic identity-restating sentence. Open with a concrete fact instead: what the company actually does, where it's based, when it was founded, or what's visible in the logo.
 - Use ONLY the facts given below — brand, country, industry, website — plus, if present, what RESEARCH NOTES say about what the company actually makes/sells/does. Never invent a founding date, designer, or history not present in the notes.
 - Any color or shape claim must come only from VISUAL FACTS, never elsewhere. If several colors are listed, you can group them into one natural clause instead of listing every one individually.
-- Include one closing sentence, adapted naturally, close to this pattern: "${closingSentenceForPrompt}" — file formats appear exactly once, only in this sentence.
-- Include a phrase from this family somewhere in the body (not the closing sentence): "educational use", "reference use", or "research purposes".
-- Never mention "${canonicalUrl}" or cdrlogo.com anywhere except implicitly via the closing sentence.
+- Do NOT mention file formats or educational/reference wording. The last sentence must be a real fact, not a closing line.
+- Never mention "${canonicalUrl}" or cdrlogo.com anywhere.
 - Vary sentence length — don't make every sentence the same length.
 - Never use: Free, Download, Perfect for, Great for, Ideal for, Best for, business use, commercial project, branding needs, marketing material, premium quality, elevate your brand, industry leader, cutting-edge, innovative, stunning.
 - Never write "this page archives/provides..." or "visitors can review/compare..." — describe the logo/brand, never the page.
@@ -373,25 +363,20 @@ Return ONLY JSON: { "description": "..." }`;
       continue;
     }
 
-    // ── HARD blockers — these genuinely break the page (policy/dup/leak) ──
     const bannedHit = containsBannedPhrase(description);
     const aiArtifactHit = containsAIArtifactPhrase(description);
     const leakedInternalUrl =
       description && (description.includes(canonicalUrl) || /cdrlogo\.com/i.test(description));
-    const missingEducational = !hasEducationalPhrase(description);
     const genericOpening = GENERIC_OPENING.test(description || "");
     const pageFillerHit = containsPageFillerPhrase(description);
+    const closingFillerHit = containsClosingFiller(description);
 
-    // ── SOFT blockers — only enforced on the FIRST attempt. On later
-    // attempts these are logged but do not reject, since on multi-color
-    // logos (5-6+ colors) these checks compound and can fail every attempt
-    // even when the description is otherwise perfectly fine.
     const nearDup = description ? findNearDuplicate(description, relatedDescriptions) : null;
     const colorIssues = checkColorsAgainstVisualFacts(description, visualFacts);
 
     const hardBad =
       !description || bannedHit || aiArtifactHit || leakedInternalUrl ||
-      missingEducational || genericOpening || pageFillerHit;
+      genericOpening || pageFillerHit || closingFillerHit;
 
     const softBad = attempt === 0 && (nearDup || colorIssues.length > 0);
 
@@ -408,9 +393,9 @@ Return ONLY JSON: { "description": "..." }`;
     if (bannedHit) reasons.push(`it used the banned phrase "${bannedHit}"`);
     if (aiArtifactHit) reasons.push(`it used the AI-artifact phrase "${aiArtifactHit}"`);
     if (leakedInternalUrl) reasons.push("it mentioned the internal archive URL/domain");
-    if (missingEducational) reasons.push('it is missing an "educational use"/"reference use"/"research purposes" phrase');
     if (genericOpening) reasons.push('it opened with the generic "is the brand associated with this logo" pattern');
     if (pageFillerHit) reasons.push(`it used "about the archive page" language ("${pageFillerHit}")`);
+    if (closingFillerHit) reasons.push(`it contains "${closingFillerHit}" — no file-format/reference sentence allowed`);
     if (softBad && nearDup) reasons.push(`it is too similar (${(nearDup.score * 100).toFixed(0)}%) to a sibling description`);
     if (softBad && colorIssues.length) reasons.push(colorIssues.join("; "));
 
@@ -419,8 +404,8 @@ Return ONLY JSON: { "description": "..." }`;
   }
 
   console.warn(`  [description:fallback-llm] All ${MAX_FALLBACK_ATTEMPTS} attempts exhausted — falling through to static template.`);
-  return null; // caller falls back to buildStaticEmergencyFallback
-} 
+  return null;
+}
 
 
 function containsPlaceholderBrandWord(text) {
@@ -750,7 +735,14 @@ Return ONLY this JSON:
     const visualFactsText = parts.join(" ");
     console.log(`  [vision] colors=[${colors.join(", ")}] shape="${parsed.shape || ""}"`);
 
-    return { hasVisualFacts: !!visualFactsText, visualFactsText, rawColors: colors };
+    return {
+      hasVisualFacts: !!visualFactsText,
+      visualFactsText,
+      rawColors: colors,
+      textVisible: String(parsed.text_visible || "").trim(),
+      symbolsText: String(parsed.symbols || "").trim(),
+      shapeText: String(parsed.shape || "").trim(),
+    };
   } catch (err) {
     console.warn(`  [vision] Image analysis failed: ${err.message} — colors/shape will not be stated.`);
     return { hasVisualFacts: false, visualFactsText: "", rawColors: [] };
@@ -793,69 +785,35 @@ async function researchBrandFacts(logoName, brand) {
 }
 
 
-// ── STATIC EMERGENCY FALLBACK ─────────────────────────────────────────────
-// Last resort only — used when even generateFallbackDescriptionViaLLM fails
-// (e.g. OpenAI itself unreachable). Under normal conditions this should
-// almost never fire.
-function buildStaticEmergencyFallback(
-  logoName,
-  { brand, website, country, industry } = {},
-  relatedDescriptions = [],
-  visualFacts = null
-) {
-  const phrase = logoPhrase(logoName);
+function buildStaticEmergencyFallback(logoName, { brand, website, country, industry } = {}, relatedDescriptions = [], visualFacts = null) {
   const subject = brand || logoName;
   const siblingIndex = relatedDescriptions.length;
-
-  const closing = pickClosingVariant(relatedDescriptions, CLOSING_VARIANTS, logoName);
-  const closingSentence = closing.value.replace(/\[Logo Phrase\]/g, phrase);
 
   let visualSentence = "";
   if (visualFacts?.hasVisualFacts) {
     const shapeMatch = visualFacts.visualFactsText.match(/Shape:\s*([^.]+)\./i);
     const shape = shapeMatch ? shapeMatch[1].trim() : null;
     const colors = visualFacts.rawColors?.length ? visualFacts.rawColors.join(" and ") : null;
-
-    if (shape && colors) {
-      visualSentence = ` The logo is a ${shape}, rendered in ${colors}.`;
-    } else if (shape) {
-      visualSentence = ` The logo is a ${shape}.`;
-    } else if (colors) {
-      visualSentence = ` The logo appears in ${colors}.`;
-    }
+    if (shape && colors) visualSentence = ` The logo is a ${shape}, rendered in ${colors}.`;
+    else if (shape) visualSentence = ` The logo is a ${shape}.`;
+    else if (colors) visualSentence = ` The logo appears in ${colors}.`;
   }
 
-  for (let i = 0; i < FALLBACK_OPENING_TEMPLATES.length; i++) {
-    const idx = (siblingIndex + i) % FALLBACK_OPENING_TEMPLATES.length;
-    const opening = FALLBACK_OPENING_TEMPLATES[idx](subject);
-
-    const hqSentence = country
-      ? ` ${FALLBACK_HQ_TEMPLATES[idx % FALLBACK_HQ_TEMPLATES.length](subject, country)}`
-      : "";
-    const industrySentence = industry
-      ? ` ${FALLBACK_INDUSTRY_CONTEXT_TEMPLATES[idx % FALLBACK_INDUSTRY_CONTEXT_TEMPLATES.length](subject, industry)}`
-      : "";
-    const websiteSentence = website
-      ? ` ${FALLBACK_WEBSITE_TEMPLATES[idx % FALLBACK_WEBSITE_TEMPLATES.length](subject, website)}`
-      : "";
-    const educationalSentence = ` This logo is provided here for educational use and reference purposes.`;
-
+  const n = FALLBACK_OPENING_TEMPLATES.length;
+  for (let i = 0; i < n; i++) {
+    const idx = (siblingIndex + i) % n;
     const candidate =
-      `${opening}${visualSentence}${hqSentence}${industrySentence}${websiteSentence}` +
-      `${educationalSentence} ${closingSentence}`;
-
-    if (!findNearDuplicate(candidate, relatedDescriptions)) return candidate;
+      FALLBACK_OPENING_TEMPLATES[idx](subject) + visualSentence +
+      (country ? ` ${FALLBACK_HQ_TEMPLATES[idx % FALLBACK_HQ_TEMPLATES.length](subject, country)}` : "") +
+      (industry ? ` ${FALLBACK_INDUSTRY_CONTEXT_TEMPLATES[idx % FALLBACK_INDUSTRY_CONTEXT_TEMPLATES.length](subject, industry)}` : "") +
+      (website ? ` ${FALLBACK_WEBSITE_TEMPLATES[idx % FALLBACK_WEBSITE_TEMPLATES.length](subject, website)}` : "");
+    if (!findNearDuplicate(candidate, relatedDescriptions)) return candidate.trim();
   }
-
-  const opening = FALLBACK_OPENING_TEMPLATES[siblingIndex % FALLBACK_OPENING_TEMPLATES.length](subject);
-  const hqSentence = country ? ` ${FALLBACK_HQ_TEMPLATES[0](subject, country)}` : "";
-  const industrySentence = industry ? ` ${FALLBACK_INDUSTRY_CONTEXT_TEMPLATES[0](subject, industry)}` : "";
-  const websiteSentence = website ? ` ${FALLBACK_WEBSITE_TEMPLATES[0](subject, website)}` : "";
-  return (
-    `${opening}${visualSentence}${hqSentence}${industrySentence}${websiteSentence} ` +
-    `This specific version, ${logoName}, is documented here for educational reference. ${closingSentence}`
-  );
+  return (FALLBACK_OPENING_TEMPLATES[siblingIndex % n](subject) + visualSentence +
+    (country ? ` ${FALLBACK_HQ_TEMPLATES[0](subject, country)}` : "")).trim();
 }
+
+
 // ============================================================================
 // PATCH START — generateMainDescription + supporting helpers
 // Fixes:
@@ -884,8 +842,7 @@ function wordCount(text) {
 }
 
 function isWordCountFarOff(caseUsed, wc) {
-  if (caseUsed === "A" || caseUsed === "B") return wc < 60 || wc > 160;
-  if (caseUsed === "C") return wc !== 0;
+  if (caseUsed === "A" || caseUsed === "B") return wc < 90 || wc > 130;
   return false;
 }
 
@@ -914,29 +871,35 @@ const EDUCATIONAL_PHRASES = [
   "reference material", "archival reference",
 ];
 
-const CLOSING_VARIANTS = [
-  `The [Logo Phrase] is available on this page in PNG, SVG, AI, and CDR formats for reference and design purposes.`,
-  `This page provides the [Logo Phrase] in PNG, SVG, AI, and CDR file formats for research and reference use.`,
-  `PNG, SVG, AI, and CDR versions of the [Logo Phrase] are provided here for educational reference.`,
-  `You'll find the [Logo Phrase] here in PNG, SVG, AI, and CDR, kept for research and archival use.`,
-  `PNG, SVG, AI, and CDR copies of the [Logo Phrase] are archived on this page for study and reference.`,
-  `The archive includes the [Logo Phrase] in PNG, SVG, AI, and CDR, intended for reference and research use.`,
-];
+
 
 function pickRotation(logoName, arr) {
   const idx = Math.abs(hashString(logoName)) % arr.length;
   return { value: arr[idx], index: idx };
 }
 
-// Detects which CLOSING_VARIANTS entry a sibling description already used,
-// by matching a distinctive fragment unique to each variant's wording.
-function detectClosingVariantIndex(text) {
+function containsClosingFiller(text) {
   if (!text) return null;
-  const t = String(text).toLowerCase();
-  if (t.includes("for reference and design purposes")) return 0;
-  if (t.includes("for research and reference use")) return 1;
-  if (t.includes("for educational reference")) return 2;
-  return null;
+  const t = String(text);
+  const m =
+    t.match(/\b(png|svg|cdr|file formats?|vector files?)\b/i) ||
+    t.match(/\bAI\b/) ||
+    t.match(/\b(educational (use|reference)|reference (use|purposes|material)|research (purposes|use)|archival (use|reference))\b/i);
+  return m ? m[0] : null;
+}
+
+const SMALL_WORDS = new Set(["of", "and", "the", "de", "da", "do", "du", "la", "le", "von", "van"]);
+
+function toProperCase(name) {
+  if (!name) return name;
+  return String(name).trim().split(/(\s+|-)/).map((part, i) => {
+    if (!part || /^\s+$/.test(part) || part === "-") return part;
+    if (/\d/.test(part)) return part.toUpperCase();
+    const lower = part.toLowerCase();
+    if (i > 0 && SMALL_WORDS.has(lower)) return lower;
+    if (/^[A-Z]{2,3}$/.test(part)) return part;
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join("");
 }
 
 // ── Rotation helpers — collision-resistant even with zero sibling data ─────
@@ -951,18 +914,7 @@ function pickFocusAngle(siblingCount, arr, logoName = "") {
   return { value: arr[idx], index: idx };
 }
 
-function pickClosingVariant(relatedDescriptions, arr, logoName = "") {
-  const used = new Set(
-    relatedDescriptions.map(detectClosingVariantIndex).filter((i) => i !== null)
-  );
-  const startOffset = Math.abs(hashString(logoName)) % arr.length;
-  for (let i = 0; i < arr.length; i++) {
-    const idx = (startOffset + i) % arr.length;
-    if (!used.has(idx)) return { value: arr[idx], index: idx };
-  }
-  const idx = Math.abs(hashString(relatedDescriptions.join("|") + logoName)) % arr.length;
-  return { value: arr[idx], index: idx };
-}
+
 // ── Color-consistency helper ─────────────────────────────────────────────
 // Extracts known color words mentioned in a text so a new version's
 // description can be forced to match (or explicitly justify diverging
@@ -1466,7 +1418,6 @@ async function validateBeforePublish({ aiContent, canonicalUrl, relatedLogos, fa
   }
   const descArtifact = containsAIArtifactPhrase(aiContent.description);
   if (descArtifact) reasons.push(`description contains AI-artifact phrase: "${descArtifact}"`);
-
   if (aiContent.description) {
     const priorDescriptions = (relatedLogos || []).map((r) => r.description).filter(Boolean);
     const dup = findNearDuplicate(aiContent.description, priorDescriptions);
@@ -1554,89 +1505,117 @@ const FALLBACK_WEBSITE_TEMPLATES = [
   (subject, website) => `The brand can be found online at ${website}.`,
   (subject, website) => `Its official web presence is hosted at ${website}.`,
 ];
+function reviewLogoName({ logoName, visualFacts, facts }) {
+  const issues = [];
+  const words = (s) =>
+    stripAccents(String(s || "")).toLowerCase()
+      .replace(/\s+v\d+$/i, "").replace(/\blogo\b/g, "")
+      .replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
 
-// FIX: this function previously never received visualFacts, so whenever
-// the strict validation gate in generateMainDescription rejected all 3 LLM
-// attempts, the fallback shipped a description with ZERO color/shape
-// information — even though analyzeLogoImageVisually had already
-// successfully detected real colors/shape from the uploaded PNG. This was
-// the main cause of "bad description despite using image analysis."
-function buildFallbackDescription(
-  logoName,
-  { brand, website, country, industry } = {},
-  relatedDescriptions = [],
-  visualFacts = null
-) {
-  const phrase = logoPhrase(logoName);
-  const subject = brand || logoName;
-  const siblingIndex = relatedDescriptions.length;
+  const nameWords = words(logoName);
+  const seenWords = words(visualFacts?.textVisible);
 
-  const closing = pickClosingVariant(relatedDescriptions, CLOSING_VARIANTS, logoName);
-  const closingSentence = closing.value.replace(/\[Logo Phrase\]/g, phrase);
-
-  // Build a visual-facts sentence ONLY from what analyzeLogoImageVisually
-  // actually reported for THIS image — never invented, never from text
-  // research (text research can describe an unrelated era/sub-brand).
-  let visualSentence = "";
-  if (visualFacts?.hasVisualFacts) {
-    const shapeMatch = visualFacts.visualFactsText.match(/Shape:\s*([^.]+)\./i);
-    const shape = shapeMatch ? shapeMatch[1].trim() : null;
-    const colors = visualFacts.rawColors?.length ? visualFacts.rawColors.join(" and ") : null;
-
-    if (shape && colors) {
-      visualSentence = ` The logo is a ${shape}, rendered in ${colors}.`;
-    } else if (shape) {
-      visualSentence = ` The logo is a ${shape}.`;
-    } else if (colors) {
-      visualSentence = ` The logo appears in ${colors}.`;
+  if (nameWords.length && seenWords.length) {
+    const overlap = nameWords.some((n) => seenWords.some((s) => s.includes(n) || n.includes(s)));
+    if (!overlap) {
+      issues.push(
+        `Folder/logo name "${logoName}" does not match the text visible in the image ("${visualFacts.textVisible}"). ` +
+        `UPDATE: rename the folder from "${logoName}" to "${toProperCase(visualFacts.textVisible)}" and re-upload. ` +
+        `(If the image is icon-only or the text is decorative, ignore this.)`
+      );
     }
   }
 
-  for (let i = 0; i < FALLBACK_OPENING_TEMPLATES.length; i++) {
-    const idx = (siblingIndex + i) % FALLBACK_OPENING_TEMPLATES.length;
-    const opening = FALLBACK_OPENING_TEMPLATES[idx](subject);
+  if (!facts.isTemplate && !facts.brand) {
+    issues.push(
+      `No real brand could be identified for "${logoName}". UPDATE one of: ` +
+      `(1) fix the spelling — rename "${logoName}" to the exact brand name, or ` +
+      `(2) if this is not a real brand, set category to "template".`
+    );
+  }
+  return issues;
+}
+async function generateTemplateDescription({ logoName, visualFacts }) {
+  const name = toProperCase(String(logoName).replace(/\s+V\d+$/i, "").trim());
+  const visualBlock = visualFacts?.hasVisualFacts
+    ? visualFacts.visualFactsText
+    : "(image analysis unavailable — describe only what the name itself clearly refers to)";
 
-    const hqSentence = country
-      ? ` ${FALLBACK_HQ_TEMPLATES[idx % FALLBACK_HQ_TEMPLATES.length](subject, country)}`
-      : "";
-    const industrySentence = industry
-      ? ` ${FALLBACK_INDUSTRY_CONTEXT_TEMPLATES[idx % FALLBACK_INDUSTRY_CONTEXT_TEMPLATES.length](subject, industry)}`
-      : "";
-    const websiteSentence = website
-      ? ` ${FALLBACK_WEBSITE_TEMPLATES[idx % FALLBACK_WEBSITE_TEMPLATES.length](subject, website)}`
-      : "";
-    const educationalSentence = ` This logo is provided here for educational use and reference purposes.`;
+  const prompt = `Write ONE very short description of a logo, EXACTLY 20 to 30 words, in one or two sentences.
 
-    const candidate =
-      `${opening}${visualSentence}${hqSentence}${industrySentence}${websiteSentence}` +
-      `${educationalSentence} ${closingSentence}`;
+LOGO NAME: ${name}
+VISUAL FACTS (from the actual image — only allowed source for color/shape/symbol claims):
+${visualBlock}
 
-    if (!findNearDuplicate(candidate, relatedDescriptions)) return candidate;
+COVER THESE THREE THINGS, VERY BRIEFLY:
+1. Meaning of the name: what "${name}" refers to (e.g. a football club, an animal, a food item, a city, a generic emblem). Base this only on the NAME and the IMAGE. If it is unclear, just say what is drawn.
+2. Where a logo like this fits: the kind of place or setting connected to that name (e.g. a sports club, a restaurant menu, a tech startup, a school). Write it as a neutral fact about the name. Do not write it as a recommendation.
+3. One visible detail from VISUAL FACTS (a color, shape or symbol).
+
+RULES:
+- 20–30 words total.
+- Use the logo name exactly as written above (same capitalization).
+- Do NOT claim a real company, founding date, HQ, designer or history.
+- Never use "brand" or "company" as a stand-in subject.
+- No file formats (PNG, SVG, AI, CDR, vector). No "educational", "reference", "research".
+- Never use: perfect for, great for, ideal for, best for, for your project, for your brand, business use, free, download.
+- Colors/symbols ONLY from VISUAL FACTS.
+
+Return ONLY JSON: { "description": "..." }`;
+
+  let lastReason = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const messages = [
+        { role: "system", content: "You write very short, factual, natural-sounding logo descriptions. You never invent facts. Return only JSON." },
+        { role: "user", content: prompt },
+      ];
+      if (lastReason) messages.push({ role: "user", content: `Previous attempt rejected because ${lastReason}. Rewrite it fixing that.` });
+
+      const completion = await callOpenAIWithRetry({
+        model: "gpt-4.1-mini", temperature: 0.5, messages,
+        response_format: { type: "json_object" },
+      });
+      let parsed = {};
+      try { parsed = JSON.parse(completion.choices[0]?.message?.content || "{}"); } catch { }
+      const description = fixMissingSpaceAfterPeriod(stripMarkdownLinks(String(parsed.description || "").trim()));
+
+      const wc = wordCount(description);
+      const reasons = [];
+      if (!description) reasons.push("it was empty");
+      if (description && (wc < 20 || wc > 30)) reasons.push(`it was ${wc} words (must be 20-30)`);
+      const banned = containsBannedPhrase(description);
+      if (banned) reasons.push(`it used banned phrase "${banned}"`);
+      const filler = containsClosingFiller(description);
+      if (filler) reasons.push(`it mentioned "${filler}"`);
+      if (containsPlaceholderBrandWord(description)) reasons.push(`it used "brand"/"company" as a subject`);
+      reasons.push(...checkColorsAgainstVisualFacts(description, visualFacts));
+
+      if (!reasons.length) return description;
+      lastReason = reasons.join("; ");
+      console.warn(`  [description:template] Attempt ${attempt + 1} rejected — ${lastReason}`);
+    } catch (err) {
+      lastReason = `the call failed (${err.message})`;
+    }
   }
 
-  const opening = FALLBACK_OPENING_TEMPLATES[siblingIndex % FALLBACK_OPENING_TEMPLATES.length](subject);
-  const hqSentence = country ? ` ${FALLBACK_HQ_TEMPLATES[0](subject, country)}` : "";
-  const industrySentence = industry ? ` ${FALLBACK_INDUSTRY_CONTEXT_TEMPLATES[0](subject, industry)}` : "";
-  const websiteSentence = website ? ` ${FALLBACK_WEBSITE_TEMPLATES[0](subject, website)}` : "";
-  return (
-    `${opening}${visualSentence}${hqSentence}${industrySentence}${websiteSentence} ` +
-    `This specific version, ${logoName}, is documented here for educational reference. ${closingSentence}`
-  );
+  const what = visualFacts?.symbolsText || visualFacts?.shapeText || "an emblem";
+  const colors = visualFacts?.rawColors?.length ? ` in ${visualFacts.rawColors.slice(0, 3).join(", ")}` : "";
+  return `${name} is a logo design showing ${what}${colors}, suited to themes connected with the name ${name}.`;
 }
+
 async function generateMainDescription({
   logoName, brand, website, country, industry, isTemplate,
   canonicalUrl, relatedDescriptions = [], visualFacts = null,
 }) {
   if (isTemplate) {
-    console.log(`  [description] Skipped — TEMPLATE category, description left blank.`);
-    return { description: "", attemptsExhausted: false, attemptsUsed: 0 };
+    const description = await generateTemplateDescription({ logoName, visualFacts });
+    return { description, attemptsExhausted: false, attemptsUsed: 1 };
   }
 
   const { hasResults, contextText } = await researchBrandFacts(logoName, brand);
 
   const focus = pickFocusAngle(relatedDescriptions.length, FOCUS_ANGLES, logoName);
-  const closing = pickClosingVariant(relatedDescriptions, CLOSING_VARIANTS, logoName);
-  const closingSentenceForPrompt = closing.value.replace(/\[Logo Phrase\]/g, logoPhrase(logoName));
 
   const priorColorSets = relatedDescriptions.map(extractColorWords).filter((c) => c.length);
   const allPriorColors = [...new Set(priorColorSets.flat())];
@@ -1685,6 +1664,9 @@ MANDATORY DIFFERENTIATION RULE (read carefully):
   function buildUserPrompt() {
     return `LOGO NAME: ${logoName}
 BRAND (if identified): ${brand || "(not confidently identified)"}
+COUNTRY (fixed fact): ${country || "(unknown)"}
+INDUSTRY (fixed fact): ${industry || "(unknown)"}
+OFFICIAL WEBSITE (fixed fact): ${website || "(unknown — do not mention a website)"}
 
 INTERNAL PAGE URL (for your reference only — do NOT use this as, or confuse this with, the brand's official website. Never mention it, or any similar-looking address, in the description you write): ${canonicalUrl}
 
@@ -1718,17 +1700,14 @@ The notes contain genuine, verifiable facts about founding date, logo history/re
   * HQ city and country
   * Official website link — ONLY if RESEARCH NOTES confirm a real domain
   * State the logo is official/original ONLY if the notes support it
-  * End with exactly one closing sentence about file formats
 
 CASE B — BRAND IS REAL/IDENTIFIABLE BUT NOTES ARE THIN:
-→ Write a FACTS-ONLY description around 100–120 words (soft target — don't pad with filler if you run out of real facts sooner). Reach this length using ONLY facts you were actually given elsewhere in this prompt (confirmed country, industry, official website, or what the company does if RESEARCH NOTES support it) plus a fuller, still-factual description of file formats. NEVER invent history, dates, a designer, or colors. Include:
+→ Write a FACTS-ONLY description around 100–120 words (soft target — don't pad with filler if you run out of real facts sooner). Use ONLY the fixed facts above (country, industry, website) and what RESEARCH NOTES support. NEVER invent history, dates, a designer, or colors. Include:
   * Brand/logo name
   * What the company does, ONLY if RESEARCH NOTES support it
-  * Country and industry, ONLY if given as fixed facts
-  * Official website, ONLY if confirmed — never guess
-  * A line noting the logo is provided for educational/reference use (exact phrase family required)
-  * End with exactly one closing sentence about file formats
-
+  * Country and industry, ONLY if given as fixed facts above
+  * Official website, ONLY if given above — never guess
+  * For the country, write "based in X" or "from X". Do not write "headquartered in X". That phrase is checked against the research text, and a country taken from the fixed facts may not appear there.
 CASE C HAS BEEN REMOVED — every non-template logo must receive at least a Case B description. Never return an empty string "" under any circumstance.
 
 STEP 2 — WRITING STYLE (applies to CASE A and CASE B only)
@@ -1754,15 +1733,13 @@ NO SELF-CONTRADICTION:
 Do not describe the logo's shape inconsistently within the same description.
 
 DESCRIBE THE LOGO/BRAND, NEVER THE ARCHIVE PAGE:
-Never write "this page archives...", "this page provides...", "visitors can review/compare...". If you run out of real facts before 90 words, write a SHORTER description instead of padding with sentences about the page.
+Never write "this page archives...", "this page provides...", "visitors can review/compare...". If you run out of real facts, write a SHORTER description instead of padding with sentences about the page.
 
 REDUNDANT "LOGO" WORDING:
 If LOGO NAME already contains "Logo" (e.g. "Borussia Dortmund Logo V2"), never stack a second "logo" right after it.
 
-CLOSING SENTENCE (formats — mention ONCE, only here):
-End with exactly one sentence, adapted naturally, close to this pattern:
-"${closingSentenceForPrompt}"
-File formats must appear exactly once in the whole description, in this closing sentence only.
+NO CLOSING LINE:
+Do NOT add any closing sentence. Never mention file formats (PNG, SVG, AI, CDR, vector) and never write "educational use", "reference use" or "research purposes". End on the last real fact about the logo/brand.
 
 STEP 3 — BANNED WORDS (ZERO EXCEPTIONS)
 Never use: Free, Download, Get it now, Perfect for, Great for, Ideal for, Best for, Business use, Commercial project(s), Branding need(s), Marketing material(s), Premium quality, High quality, High resolution, Best logo, Suitable for project(s), Useful for creator(s), Design asset(s), Creative work, Elevate your brand, Industry leader, Trusted worldwide, Modern branding, Amazing, Beautiful, Professional design, Click here, 100% free, No copyright, HD logo, World best, Top quality, Cutting-edge, Innovative, Stunning.
@@ -1774,7 +1751,6 @@ If in doubt between Case A and Case B, choose Case B — but Case B is always th
 BANNED STRUCTURES (do not use these, even reworded slightly):
 - Banned Opening: "[Brand Name] is a professional club/company based in [Location], known for competing in..."
 - Banned Opening: "[Brand Name] is the brand associated with this logo."
-- Banned Closing: "This page provides the [Brand Name] in PNG, SVG, AI, and CDR file formats for research and reference use."
 - DYNAMIC PATTERN PROHIBITION: Do not substitute the banned list with a third repetitive formula. Every description must have a completely unique syntax layout.
 
 Return ONLY this JSON:
@@ -1823,7 +1799,7 @@ Return ONLY this JSON:
 
       const extraNote = attempt === 0
         ? ""
-        : `Your previous JSON response was rejected because ${lastReason}. Regenerate the ENTIRE JSON response, fixing this issue precisely. Pay special attention to: staying roughly in the 100–120 word range, STEP 3 banned words, cutting interpretive filler, colors named only (never hex/RGB/Pantone) and ONLY from VISUAL FACTS, the internal-URL rule, natural human prose with varied sentence lengths and no stiff AI vocabulary, never opening with "[Name] is the brand associated with this logo," and — if Case B — the required educational/reference phrase. If a near-duplicate issue was flagged, rewrite with an entirely different sentence structure. If a headquarters or founding-year mismatch was flagged, use EXACTLY the previously established value. If a color was flagged as not visible in the image, remove it — only state colors listed in VISUAL FACTS. If sentence cadence was flagged as too uniform, vary sentence lengths more.`;
+        : `Your previous JSON response was rejected because ${lastReason}. Regenerate the ENTIRE JSON response,fixing this issue precisely. Pay special attention to:staying roughly in the 100–120 word range, STEP 3 banned words, cutting interpretive filler, colors named only (never hex/RGB/Pantone) and ONLY from VISUAL FACTS, the internal-URL rule, natural human prose with varied sentence lengths and no stiff AI vocabulary, never opening with "[Name] is the brand associated with this logo," and never mentioning file formats or educational/reference/research wording. If a near-duplicate issue was flagged, rewrite with an entirely different sentence structure. If a headquarters or founding-year mismatch was flagged, use EXACTLY the previously established value. If a color was flagged as not visible in the image, remove it — only state colors listed in VISUAL FACTS. If sentence cadence was flagged as too uniform, vary sentence lengths more.`;
 
       const result = await runDescriptionCall(extraNote);
       caseUsed = result.caseUsed;
@@ -1835,8 +1811,6 @@ Return ONLY this JSON:
         description && (description.includes(canonicalUrl) || /cdrlogo\.com/i.test(description));
       const wc = wordCount(description);
       const wordCountBad = !!description && isWordCountFarOff(caseUsed, wc);
-      const missingEducationalPhraseB =
-        caseUsed === "B" && !!description && !hasEducationalPhrase(description);
       const aiArtifactHit = containsAIArtifactPhrase(description);
       const stiffVocabHit = containsAIStiffVocab(description);
       const fluffHit = containsFluffPhrase(description);
@@ -1853,20 +1827,21 @@ Return ONLY this JSON:
         : [];
       const allGroundingIssues = [...sourceGroundingIssues, ...visualColorIssues, ...llmFactIssues];
       const pageFillerHit = containsPageFillerPhrase(description);
+      const closingFillerHit = containsClosingFiller(description);
       const cadenceIssue = checkSentenceLengthVariance(description);
       const genericOpeningHit = GENERIC_OPENING_MAIN.test(description || "");
 
       const isBad =
         bannedHit || colorCodeHit || leakedInternalUrl || wordCountBad ||
-        missingEducationalPhraseB || aiArtifactHit || fluffHit || nearDupHit ||
+        aiArtifactHit || fluffHit || nearDupHit ||
         hqMismatch || foundingYearMismatch || allGroundingIssues.length || pageFillerHit ||
-        !description || genericOpeningHit;
+        closingFillerHit || !description || genericOpeningHit;
 
       if (stiffVocabHit) console.log(`  [description] Style note (non-blocking): stiff vocabulary "${stiffVocabHit}"`);
       if (cadenceIssue) console.log(`  [description] Style note (non-blocking): ${cadenceIssue}`);
 
       if (!isBad) {
-        console.log(`  [description] Case ${caseUsed} — ${wordCount(description)} words | attempt ${attemptsUsed}/${MAX_DESCRIPTION_ATTEMPTS} | focus#${focus.index} closing#${closing.index}`);
+        console.log(`  [description] Case ${caseUsed} — ${wordCount(description)} words | attempt ${attemptsUsed}/${MAX_DESCRIPTION_ATTEMPTS} | focus#${focus.index}`);
         return { description, attemptsExhausted: false, attemptsUsed };
       }
 
@@ -1876,13 +1851,13 @@ Return ONLY this JSON:
       if (colorCodeHit) reasonParts.push(`it included a hex/RGB/Pantone color code — colors must be described by name only`);
       if (leakedInternalUrl) reasonParts.push(`it mentioned the internal archive URL/domain instead of a verified brand website`);
       if (wordCountBad) reasonParts.push(`it was ${wc} words, far outside a reasonable range for Case ${caseUsed}`);
-      if (missingEducationalPhraseB) reasonParts.push(`it is Case B but missing the required educational/reference phrase`);
       if (aiArtifactHit) reasonParts.push(`it used the unnatural AI phrase "${aiArtifactHit}"`);
       if (fluffHit) reasonParts.push(`it used the interpretive/filler phrase "${fluffHit}"`);
       if (nearDupHit) reasonParts.push(`it is too similar (${(nearDupHit.score * 100).toFixed(0)}% overlap) to a previously published sibling description`);
       if (hqMismatch) reasonParts.push(`it stated headquarters as "${newHQ}" but a sibling already established "${priorHQ}"`);
       if (foundingYearMismatch) reasonParts.push(`it stated founding year ${newFoundingYear} but a sibling already established ${priorFoundingYear}`);
       if (pageFillerHit) reasonParts.push(`it used "about the archive page" language ("${pageFillerHit}") instead of a fact about the LOGO/BRAND`);
+      if (closingFillerHit) reasonParts.push(`it contains "${closingFillerHit}" — no file-format or reference/educational sentence is allowed anywhere in the description`);
       if (genericOpeningHit) reasonParts.push(`it opened with the generic "is the brand associated with this logo" pattern`);
       if (cadenceIssue) reasonParts.push(cadenceIssue);
       allGroundingIssues.forEach((r) => reasonParts.push(r));
@@ -2715,25 +2690,25 @@ STRICTLY FORBIDDEN: Free, Download, marketing language.`;
 - Must be the brand's own root domain — not a Wikipedia page, social media profile, marketplace listing, or unrelated site.
 - If you are not near-certain, return "".
 - Never fabricate a domain that "looks right" (e.g. guessing brandname.com without verifying it's correct).`;
-const noVerifiedFacts = !description;
-const isRestrictedFaq = isTemplate || noVerifiedFacts;
+  const noVerifiedFacts = !description;
+  const isRestrictedFaq = isTemplate || noVerifiedFacts;
 
-// FIX: the LLM was asked to choose 2 out of a shortlist, but it kept
-// gravitating to the same "universally safe" questions (icon+text,
-// HQ city) regardless of what shortlist it saw. Selection now happens
-// entirely in code via selectFaqQuestions — the LLM is only asked to
-// WRITE the answers to these 2 fixed questions, never to pick them.
-const selectedFaqQuestions = selectFaqQuestions({
-  isTemplate,
-  noVerifiedFacts,
-  description,
-  visualFacts,
-  country,
-  industry,
-  usedFaqQuestions,
-});
-console.log(`  [faq] Selected questions: ${selectedFaqQuestions.map((q) => `"${q}"`).join(" | ")}`);
-const faqSection = `--------------------------------------------------
+  // FIX: the LLM was asked to choose 2 out of a shortlist, but it kept
+  // gravitating to the same "universally safe" questions (icon+text,
+  // HQ city) regardless of what shortlist it saw. Selection now happens
+  // entirely in code via selectFaqQuestions — the LLM is only asked to
+  // WRITE the answers to these 2 fixed questions, never to pick them.
+  const selectedFaqQuestions = selectFaqQuestions({
+    isTemplate,
+    noVerifiedFacts,
+    description,
+    visualFacts,
+    country,
+    industry,
+    usedFaqQuestions,
+  });
+  console.log(`  [faq] Selected questions: ${selectedFaqQuestions.map((q) => `"${q}"`).join(" | ")}`);
+  const faqSection = `--------------------------------------------------
 faq (EXACTLY 2 Q&A PAIRS — QUESTIONS ARE FIXED, DO NOT CHANGE THEM)
 --------------------------------------------------
 
@@ -3010,14 +2985,14 @@ VERIFIED FACTS):
     `${logoName} in PNG and SVG vector format for educational reference and research use.`;
   const imageObjectDescription = stripAccents(parsed.image_object_description) ||
     `${logoName} image on cdrlogo.com`;
-// Lock the question text to exactly what was selected in code — the LLM
-// sometimes lightly rewords a question even when told not to. The answer
-// is still the LLM's own text; only the question label is pinned.
-const rawFaqPairs = (Array.isArray(parsed.faq) ? parsed.faq : []).slice(0, 2);
-const faqPairs = selectedFaqQuestions.map((q, i) => ({
-  question: q,
-  answer: (rawFaqPairs[i]?.answer && String(rawFaqPairs[i].answer).trim()) || "",
-}));
+  // Lock the question text to exactly what was selected in code — the LLM
+  // sometimes lightly rewords a question even when told not to. The answer
+  // is still the LLM's own text; only the question label is pinned.
+  const rawFaqPairs = (Array.isArray(parsed.faq) ? parsed.faq : []).slice(0, 2);
+  const faqPairs = selectedFaqQuestions.map((q, i) => ({
+    question: q,
+    answer: (rawFaqPairs[i]?.answer && String(rawFaqPairs[i].answer).trim()) || "",
+  }));
 
   const violations = validateAIContent(
     { ...parsed, meta_title: metaTitle, meta_description: metaDescription, alt_text: altText, og_title: ogTitle, og_description: ogDescription, twitter_title: twitterTitle, twitter_description: twitterDescription, image_object_description: imageObjectDescription, faq: faqPairs },
@@ -3075,12 +3050,6 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       sharedFields.category.toLowerCase().trim() === "template" ||
       /\btemplate\b/i.test(finalLogoName);
 
-    // ── FIX: resolve category, brand/country/industry/website, and the
-    // description EXACTLY ONCE — this is the expensive part (Tavily
-    // research + up to 3 internal description attempts + 2 LLM calls).
-    // Previously this whole thing sat inside the outer retry loop below
-    // and could re-run up to 3 times per upload, risking timeout and
-    // occasionally landing on a different brand/category each pass.
     const facts = await resolveLogoFacts({
       logoName: stripSpecialChars(finalLogoName),
       researchName,
@@ -3090,9 +3059,9 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       visualFacts,
     });
 
-    // ── Only meta/FAQ generation is retried — it's a single cheap GPT
-    // call, so retrying it 2-3 times is fast and doesn't touch Tavily or
-    // re-resolve brand/category/description.
+    const displayLogoName =
+      facts.isTemplate || isManualTemplate ? toProperCase(finalLogoName) : finalLogoName;
+
     const MAX_VALIDATION_RETRIES = 2;
     let metaContent = null;
     let aiContent = null;
@@ -3101,7 +3070,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
 
     for (let attempt = 0; attempt <= MAX_VALIDATION_RETRIES; attempt++) {
       metaContent = await generateMetaAndFaqContent({
-        logoName: stripSpecialChars(finalLogoName),
+        logoName: stripSpecialChars(displayLogoName),
         canonicalUrl,
         isManualTemplate,
         mainCategory: facts.mainCategory,
@@ -3148,10 +3117,8 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       console.warn(`  [publish-validate] ✗ Attempt ${attempt + 1}/${MAX_VALIDATION_RETRIES + 1} failed:\n    - ${validation.reasons.join("\n    - ")}`);
     }
 
-    const needsReview = !validation.passed;
-    if (needsReview) {
-      console.warn(`  [publish-validate] Exhausted retries — marking "Needs Review". Reasons:\n    - ${validation.reasons.join("\n    - ")}`);
-    }
+    const nameReview = reviewLogoName({ logoName: displayLogoName, visualFacts, facts });
+    const needsReview = !validation.passed || nameReview.length > 0;
 
     const descriptionNeedsDraft =
       !aiContent.isTemplate && !aiContent.description && aiContent.descriptionAttemptsExhausted;
@@ -3161,8 +3128,18 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     }
 
     const descriptionReminder = descriptionNeedsDraft
-      ? `No verified facts could be found for "${finalLogoName}" after 3 attempts — description was left empty. Publish status set to Draft. An admin must manually write or verify the description before publishing.`
+      ? `No verified facts could be found for "${displayLogoName}" after 3 attempts — description was left empty. Publish status set to Draft. An admin must manually write or verify the description before publishing.`
       : null;
+
+    const allReasons = [
+      ...validation.reasons,
+      ...nameReview.map((r) => `NAME REVIEW: ${r}`),
+      ...(descriptionReminder ? [descriptionReminder] : []),
+    ];
+
+    if (needsReview) {
+      console.warn(`  [publish-validate] Marking "Needs Review". Reasons:\n    - ${allReasons.join("\n    - ")}`);
+    }
 
     console.log(`  [ai] main: "${aiContent.mainCategory}" | sub: "${aiContent.subCategory}" | brand: "${aiContent.brand || "(none — template)"}" | website: "${aiContent.website || "(none)"}" | country: "${aiContent.country || "(none)"}" | industry: "${aiContent.industry || "(none)"}"`);
     console.log(`  [ai] metaTitle (${aiContent.metaTitle.length} chars): "${aiContent.metaTitle.substring(0, 60)}"`);
@@ -3247,7 +3224,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     // ── Step E: build schema JSON-LD ────────────────────────────────────────
     const imageObjectSchema = buildImageObjectSchema({
       imageUrl: ogImageUrl,
-      logoName: finalLogoName,
+      logoName: displayLogoName,
       brand: aiContent.brand,
       canonicalUrl,
       description: aiContent.imageObjectDescription,
@@ -3255,7 +3232,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
 
     const breadcrumbSchema = buildBreadcrumbSchema({
       brand: aiContent.brand,
-      logoName: finalLogoName,
+      logoName: displayLogoName,
       canonicalUrl,
     });
 
@@ -3267,7 +3244,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     const logo = await prisma.logo.create({
       data: {
         owner: "admin",
-        logoName: finalLogoName,
+        logoName: displayLogoName,
         slug: finalSlug,
         brand: aiContent.brand,
         website: aiContent.website,
@@ -3284,9 +3261,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
             ? "Draft"
             : sharedFields.publishStatus,
         validationStatus: needsReview ? "needs_review" : "published",
-        validationReasons: descriptionReminder
-          ? [...validation.reasons, descriptionReminder]
-          : validation.reasons,
+        validationReasons: allReasons,
         downloadCount: sharedFields.downloadCount,
         svgUrl,
         pngUrl,
@@ -3320,7 +3295,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
 
     return {
       success: true,
-      logoName: finalLogoName,
+      logoName: displayLogoName,
       slug: finalSlug,
       versioned,
       originalName: rawLogoName,
@@ -3335,9 +3310,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       needsReview,
       descriptionNeedsDraft,
       descriptionReminder,
-      validationReasons: descriptionReminder
-        ? [...validation.reasons, descriptionReminder]
-        : validation.reasons,
+      validationReasons: allReasons,
     };
 
   } catch (err) {
@@ -3350,7 +3323,6 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     };
   }
 }
-
 
 export const maxDuration = 60;
 

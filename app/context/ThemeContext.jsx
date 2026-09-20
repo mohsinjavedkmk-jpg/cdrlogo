@@ -14,7 +14,7 @@ export function ThemeProvider({ children }) {
     if (storedTheme) {
       setDark(storedTheme === "dark");
     } else {
-      setDark(true); // default theme
+      setDark(false); // default theme
     }
   }, []);
 

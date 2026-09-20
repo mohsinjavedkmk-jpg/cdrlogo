@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../context/ThemeContext";
 import { useRouter } from "next/navigation";
+import { toSearchSlug } from "../utils/searchSlug";
 
 const popularSearches = [
   "Technology Logos",
@@ -27,11 +28,8 @@ export default function Home() {
   }, []);
 
   const handleSearch = () => {
-    const q = searchValue.trim().toLowerCase();
-    if (!q) return;
-
-    const slug = q.replace(/\s+/g, "-"); // 👈 space → hyphen
-
+    const slug = toSearchSlug(searchValue);
+    if (!slug) return;
     router.push(`/search/${encodeURIComponent(slug)}`);
   };
   const handleKeyDown = (e) => {
@@ -48,11 +46,10 @@ export default function Home() {
 
     clearTimeout(debounceRef.current);
 
-    const q = searchValue.trim().toLowerCase();
-    if (!q) return;
+    const slug = toSearchSlug(searchValue);
+    if (!slug) return;
 
     debounceRef.current = setTimeout(() => {
-      const slug = q.replace(/\s+/g, "-");
       router.push(`/search/${encodeURIComponent(slug)}`);
     }, 3000);
 
@@ -364,7 +361,8 @@ export default function Home() {
                   onClick={() => {
                     clearTimeout(debounceRef.current);
                     setSearchValue(tag);
-                    const slug = tag.trim().toLowerCase().replace(/\s+/g, "-");
+                    const slug = toSearchSlug(tag);
+                    if (!slug) return;
                     router.push(`/search/${encodeURIComponent(slug)}`);
                   }}
                 >

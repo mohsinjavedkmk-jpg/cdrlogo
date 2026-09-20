@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import Footer from "../../components/Footer";
 import Image from "next/image";
+import { toSearchSlug } from "../../utils/searchSlug";
 
 export default function LogoDetail({ logo: initialLogo, initialRelated = [], pageTitle }) {
     const { slug } = useParams();
@@ -51,10 +52,9 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
 
     // ── inline search bar logic ─────────────────────────────────────────────
     const doSearch = (query) => {
-        const q = query.trim().toLowerCase();
-        if (!q) return;
-        const slugified = q.replace(/\s+/g, "-");
-        router.push(`/search/${encodeURIComponent(slugified)}`);
+        const slug = toSearchSlug(query);
+        if (!slug) return;
+        router.push(`/search/${encodeURIComponent(slug)}`);
     };
 
     const handleSearchKeyDown = (e) => {
@@ -75,10 +75,9 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
             return;
         }
         clearTimeout(searchDebounceRef.current);
-        const q = searchValue.trim().toLowerCase();
-        if (!q) return;
+        if (!toSearchSlug(searchValue)) return;
 
-        searchDebounceRef.current = setTimeout(() => doSearch(q), 3000);
+        searchDebounceRef.current = setTimeout(() => doSearch(searchValue), 3000);
         return () => clearTimeout(searchDebounceRef.current);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchValue]);
@@ -805,30 +804,12 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                                 <div className="card-title">About This Logo</div>
                                 <p
                                     className="about-text"
-                                    dangerouslySetInnerHTML={expandDesc ? enrichedFull : enrichedShort}
+                                    dangerouslySetInnerHTML={enrichedFull}
                                 />
-                                {fullDesc.length > 200 && (
-                                    <button className="see-more-btn" onClick={() => setExpandDesc(v => !v)}>
-                                        {expandDesc ? "See Less ↑" : "See More →"}
-                                    </button>
-                                )}
+
                             </div>
 
-                            {faqItems.length > 0 && (
-                                <div className="card anim d2">
-                                    <div className="card-title">Frequently Asked Questions</div>
-                                    <div className="faq-list">
-                                        {faqItems.map((item, i) => (
-                                            <details key={i} className="faq-item">
-                                                <summary className="faq-question">
-                                                    <span>{item.question}</span>
-                                                </summary>
-                                                <div className="faq-answer">{item.answer}</div>
-                                            </details>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {infoCells.length > 0 && (
                                 <div className="card anim d3">
@@ -991,7 +972,21 @@ export default function LogoDetail({ logo: initialLogo, initialRelated = [], pag
                                     <div className="svg-code">{logo.svgContent.slice(0, 300)}{logo.svgContent.length > 300 ? "…" : ""}</div>
                                 </div>
                             )}
-
+                            {faqItems.length > 0 && (
+                                <div className="card anim d2">
+                                    <div className="card-title">Frequently Asked Questions</div>
+                                    <div className="faq-list">
+                                        {faqItems.map((item, i) => (
+                                            <details key={i} className="faq-item">
+                                                <summary className="faq-question">
+                                                    <span>{item.question}</span>
+                                                </summary>
+                                                <div className="faq-answer">{item.answer}</div>
+                                            </details>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                             <div className="ad-card anim d3" style={{ minHeight: 160 }} />
                         </div>
                     </div>
