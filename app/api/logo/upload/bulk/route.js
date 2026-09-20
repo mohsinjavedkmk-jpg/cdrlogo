@@ -2782,8 +2782,7 @@ MANDATORY RULES FOR THIS VARIANT:
 1. meta_title MUST be textually different from every previous Meta Title listed above.
 2. meta_description MUST use different sentence structure and different educational/reference phrasing.
 3. og_title, og_description, twitter_title, twitter_description must each differ in wording from previous fields.
-4. tags: keep core brand/format tags but vary the 4 context-specific tags. important **dont use these tags in tags [logo,png,svg,vector,cdrlogo,cdrlogo.com] **
-5. faq: choose a different combination of questions than previous pages where possible (see FAQ pool below).
+4. faq: choose a different combination of questions than previous pages where possible (see FAQ pool below).
 ` : ""}
 
 ==================================================
@@ -2813,41 +2812,7 @@ ${metaDescriptionFieldRule}
 --------------------------------------------------
 alt_text (LOCKED FORMAT)
 --------------------------------------------------
-
 ${altTextRule}
-
-
-==================================================
-🚨 ABSOLUTE TAG RULE (HIGHEST PRIORITY) only select less than 5
-==================================================
-
-The "tags" array MUST NEVER contain ANY of the following values:
-
-- logo
-- png
-- svg
-- vector
-- cdrlogo
-- cdrlogo.com
-- website
-- website.com
-${isTemplate ? `- brand\n- company` : ""}
-
-THIS IS A HARD REQUIREMENT.
-
-DO NOT include these words exactly, in any capitalization, or as standalone tags.
-
-❌ WRONG:
-[ "logo", "png", "sports", "vector"]
-
-❌ WRONG:
-[ "SVG", "vector", "cdrlogo.com"]
-
-
-
-If you cannot think of enough tags, use fewer tags.
-DO NOT fill the array with the forbidden words.
---------------------------------------------------
 
 --------------------------------------------------
 og_title (50–60 chars)
@@ -2921,7 +2886,6 @@ VERIFIED FACTS):
   "meta_title": "...",
   "meta_description": "...",
   "alt_text": "...",
-  "tags": ["...", "..."],
   "og_title": "...",
   "og_description": "...",
   "twitter_title": "...",
@@ -2971,9 +2935,6 @@ VERIFIED FACTS):
     `${logoName}  available in PNG, SVG and vector format for educational use and research purposes. Reference archive on cdrlogo.com.`;
   const altText = stripAccents(parsed.alt_text) ||
     `${logoPhrase(logoName)} — PNG SVG vector file on cdrlogo.com`;
-  const tags = Array.isArray(parsed.tags) && parsed.tags.length
-    ? parsed.tags.map(t => stripAccents(String(t)))
-    : [logoName, "PNG", "SVG", "vector", "cdrlogo.com"];
 
   const ogTitle = stripAccents((parsed.og_title && String(parsed.og_title).trim())) ||
     `${logoName} — PNG & SVG Vector`;
@@ -3006,7 +2967,6 @@ VERIFIED FACTS):
     metaTitle,
     metaDescription,
     altText,
-    tags,
     ogTitle,
     ogDescription,
     twitterTitle,
@@ -3017,7 +2977,112 @@ VERIFIED FACTS):
 }
 
 
+const MIN_TAGS = 4;
+const MAX_TAGS = 6;
 
+const FORBIDDEN_TAG_EXACT = new Set([
+  "logo", "logos", "png", "svg", "vector", "ai", "cdr",
+  "cdrlogo", "website", "free", "download", "brand", "company",
+]);
+
+function normalizeTag(t) {
+  return stripAccents(String(t || ""))
+    .toLowerCase()
+    .replace(/\s+v\d+$/i, "")
+    .replace(/\blogos?\b/g, "")            // "lion logo" → "lion"
+    .replace(/[^a-z0-9\s&'-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isValidTag(t) {
+  return (
+    !!t &&
+    t.length >= 2 &&
+    t.length <= 40 &&
+    !FORBIDDEN_TAG_EXACT.has(t) &&          // sirf poora tag match hone par reject
+    !/cdrlogo|\b(png|svg|download|free)\b/.test(t)
+  );
+}
+// Key = taxonomy ka EXACT sub_category string (CATEGORY_TAXONOMY_TEXT wala).
+// Yahan apne keyword tool (GSC / Ahrefs / Keyword Planner) ke high-volume
+// terms bharo. Khaali rehne par tags sirf brand + taxonomy + DB se banenge.
+const CURATED_TAGS_BY_SUBCATEGORY = {
+  // "Sportswear": ["sportswear", "athletic apparel", "sports brand"],
+  // "Football Clubs": ["football club", "soccer club", "premier league"],
+  // "Fast Food Restaurants": ["fast food", "restaurant chain", "food brand"],
+};
+
+// DB frequency = "high volume" ka proxy. Brand-specific tags (nike, adidas)
+// exclude hote hain taaki ek brand ka tag doosre brand ke page par na chale jaye.
+async function fetchPopularTags(categoryKey, limit = 8) {
+  if (!categoryKey) return [];
+  try {
+    const rows = await prisma.logo.findMany({
+      where: { category: { has: categoryKey } },
+      select: { tags: true, brand: true, logoName: true },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+
+    const brandSet = new Set(
+      rows
+        .flatMap((r) => [normalizeTag(r.brand), normalizeTag(r.logoName)])
+        .filter(Boolean)
+    );
+
+    const freq = new Map();
+    for (const r of rows) {
+      for (const raw of r.tags || []) {
+        const t = normalizeTag(raw);
+        if (!isValidTag(t) || brandSet.has(t)) continue;
+        freq.set(t, (freq.get(t) || 0) + 1);
+      }
+    }
+
+    return [...freq.entries()]
+      .filter(([, count]) => count >= 3) // one-off junk tags filter
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([t]) => t);
+  } catch (err) {
+    console.warn(`  [tags] Popular tag lookup failed: ${err.message}`);
+    return [];
+  }
+}
+
+async function buildTags({
+  isTemplate, brand, logoName, mainCategory, subCategory, industry, country,
+}) {
+  const categoryKey = isTemplate ? "template" : subCategory;
+
+  const candidates = [
+    brand || logoName,
+    isTemplate ? "template" : subCategory,
+    isTemplate ? "" : mainCategory,
+    ...(CURATED_TAGS_BY_SUBCATEGORY[categoryKey] || []),
+    ...(await fetchPopularTags(categoryKey)),
+    isTemplate ? "" : country,
+    isTemplate ? "" : industry,
+  ];
+
+  const seen = new Set();
+  const tags = [];
+  for (const c of candidates) {
+    const t = normalizeTag(c);
+    if (!isValidTag(t) || seen.has(t)) continue;
+    seen.add(t);
+    tags.push(t);
+    if (tags.length >= MAX_TAGS) break;
+  }
+
+  if (tags.length < MIN_TAGS) {
+    console.warn(
+      `  [tags] Only ${tags.length} tag(s) for "${logoName}" (category: ${categoryKey}) — curated list / DB data thin hai.`
+    );
+  }
+  return tags;
+}
 async function processOneLogoFolder({ folderName, folderFiles, sharedFields, watermark }) {
   const rawLogoName = stripSpecialChars(logoNameFromFolderName(folderName));
   console.log(`\n  ── Processing folder: "${folderName}" → "${rawLogoName}"`);
@@ -3062,6 +3127,19 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
     const displayLogoName =
       facts.isTemplate || isManualTemplate ? toProperCase(finalLogoName) : finalLogoName;
 
+    // Retry loop ke BAHAR — tags facts se bante hain, LLM output se nahi,
+    // isliye inhe har validation attempt par dobara banane ki zaroorat nahi.
+    const tags = await buildTags({
+      isTemplate: facts.isTemplate,
+      brand: facts.brand,
+      logoName: displayLogoName,
+      mainCategory: facts.mainCategory,
+      subCategory: facts.subCategory,
+      industry: facts.industry,
+      country: facts.country,
+    });
+    console.log(`  [tags] ${tags.length} → ${tags.join(", ")}`);
+
     const MAX_VALIDATION_RETRIES = 2;
     let metaContent = null;
     let aiContent = null;
@@ -3099,6 +3177,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
         isVariant: related.length > 0,
         relatedSlugs: related.map((r) => r.slug).filter(Boolean),
         ...metaContent,
+        tags,
       };
 
       faqSchemaForValidation = buildFaqSchema(aiContent.faqPairs);
