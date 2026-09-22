@@ -1505,36 +1505,62 @@ const FALLBACK_WEBSITE_TEMPLATES = [
   (subject, website) => `The brand can be found online at ${website}.`,
   (subject, website) => `Its official web presence is hosted at ${website}.`,
 ];
-function reviewLogoName({ logoName, visualFacts, facts }) {
-  const issues = [];
-  const words = (s) =>
-    stripAccents(String(s || "")).toLowerCase()
-      .replace(/\s+v\d+$/i, "").replace(/\blogo\b/g, "")
-      .replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 1);
 
-  const nameWords = words(logoName);
-  const seenWords = words(visualFacts?.textVisible);
-
-  if (nameWords.length && seenWords.length) {
-    const overlap = nameWords.some((n) => seenWords.some((s) => s.includes(n) || n.includes(s)));
-    if (!overlap) {
-      issues.push(
-        `Folder/logo name "${logoName}" does not match the text visible in the image ("${visualFacts.textVisible}"). ` +
-        `UPDATE: rename the folder from "${logoName}" to "${toProperCase(visualFacts.textVisible)}" and re-upload. ` +
-        `(If the image is icon-only or the text is decorative, ignore this.)`
-      );
+function levenshtein(a, b) {
+  a = String(a || "").toLowerCase();
+  b = String(b || "").toLowerCase();
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     }
   }
-
-  if (!facts.isTemplate && !facts.brand) {
-    issues.push(
-      `No real brand could be identified for "${logoName}". UPDATE one of: ` +
-      `(1) fix the spelling — rename "${logoName}" to the exact brand name, or ` +
-      `(2) if this is not a real brand, set category to "template".`
-    );
-  }
-  return issues;
+  return dp[m][n];
 }
+
+// Replaces reviewLogoName(). No image-text requirement — templates are
+// skipped outright, and a non-template name is only ever CORRECTED, never
+// flagged. If no brand was identified, or the name is too different from
+// the brand to be a plausible typo, the name is simply left untouched.
+function correctLogoNameSpelling({ logoName, brand, isTemplate }) {
+  if (isTemplate || !brand) {
+    return { correctedName: logoName, wasCorrected: false };
+  }
+
+  const versionSuffix = logoName.match(/\s+V\d+$/i)?.[0] || "";
+  const baseName = logoName.replace(/\s+V\d+$/i, "").trim();
+
+  const normBase = normalizeName(baseName);
+  const normBrand = normalizeName(brand);
+
+  if (!normBase || !normBrand || normBase === normBrand) {
+    return { correctedName: logoName, wasCorrected: false };
+  }
+
+  const dist = levenshtein(normBase, normBrand);
+  const maxLen = Math.max(normBase.length, normBrand.length) || 1;
+  const similarity = 1 - dist / maxLen;
+  const SPELLING_SIMILARITY_THRESHOLD = 0.72;
+
+  if (similarity >= SPELLING_SIMILARITY_THRESHOLD) {
+    const corrected = `${toProperCase(brand)}${versionSuffix}`;
+    console.log(
+      `  [name:spelling] "${baseName}" looks like a misspelling of "${brand}" ` +
+      `(similarity ${(similarity * 100).toFixed(0)}%) — auto-corrected to "${corrected}".`
+    );
+    return { correctedName: corrected, wasCorrected: true };
+  }
+
+  return { correctedName: logoName, wasCorrected: false };
+}
+
 async function generateTemplateDescription({ logoName, visualFacts }) {
   const name = toProperCase(String(logoName).replace(/\s+V\d+$/i, "").trim());
   const visualBlock = visualFacts?.hasVisualFacts
@@ -1610,7 +1636,7 @@ async function generateMainDescription({
 }) {
   if (isTemplate) {
     const description = await generateTemplateDescription({ logoName, visualFacts });
-    return { description, attemptsExhausted: false, attemptsUsed: 1 };
+    return { description, attemptsExhausted: false, attemptsUsed: 1, isEmergencyFallback: false };
   }
 
   const { hasResults, contextText } = await researchBrandFacts(logoName, brand);
@@ -1842,7 +1868,7 @@ Return ONLY this JSON:
 
       if (!isBad) {
         console.log(`  [description] Case ${caseUsed} — ${wordCount(description)} words | attempt ${attemptsUsed}/${MAX_DESCRIPTION_ATTEMPTS} | focus#${focus.index}`);
-        return { description, attemptsExhausted: false, attemptsUsed };
+        return { description, attemptsExhausted: false, attemptsUsed, isEmergencyFallback: false };
       }
 
       const reasonParts = [];
@@ -1873,7 +1899,7 @@ Return ONLY this JSON:
     });
     if (llmFallback) {
       console.log(`  [description] Relaxed LLM fallback succeeded.`);
-      return { description: llmFallback, attemptsExhausted: false, attemptsUsed };
+      return { description: llmFallback, attemptsExhausted: false, attemptsUsed, isEmergencyFallback: false };
     }
 
     console.warn(`  [description] Relaxed LLM fallback also failed — using static emergency fallback.`);
@@ -1886,6 +1912,7 @@ Return ONLY this JSON:
       ),
       attemptsExhausted: false,
       attemptsUsed,
+      isEmergencyFallback: true,
     };
   } catch (err) {
     console.warn(`  [description] Generation failed: ${err.message} — trying relaxed LLM fallback.`);
@@ -1895,7 +1922,7 @@ Return ONLY this JSON:
         contextText: "", hasResults: false, canonicalUrl, relatedDescriptions, visualFacts,
       });
       if (llmFallback) {
-        return { description: llmFallback, attemptsExhausted: false, attemptsUsed: 0 };
+        return { description: llmFallback, attemptsExhausted: false, attemptsUsed: 0, isEmergencyFallback: false };
       }
     } catch (fallbackErr) {
       console.warn(`  [description] Relaxed LLM fallback also errored: ${fallbackErr.message}`);
@@ -1910,6 +1937,7 @@ Return ONLY this JSON:
       ),
       attemptsExhausted: false,
       attemptsUsed: 0,
+      isEmergencyFallback: true,
     };
   }
 }
@@ -2409,6 +2437,7 @@ async function resolveLogoFacts({
     website: isTemplate ? "" : (resolvedWebsite || ""),
     description: descResult.description,
     descriptionAttemptsExhausted: descResult.attemptsExhausted,
+    descriptionIsWeak: !isTemplate && !!descResult.isEmergencyFallback,
   };
 }
 
@@ -3124,8 +3153,19 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       visualFacts,
     });
 
+    // Spelling correction (replaces reviewLogoName). Templates skip this —
+    // no real brand to compare against, and templates never go to review
+    // regardless of what happens here.
+    const nameCorrection = correctLogoNameSpelling({
+      logoName: finalLogoName,
+      brand: facts.brand,
+      isTemplate: facts.isTemplate,
+    });
+
     const displayLogoName =
-      facts.isTemplate || isManualTemplate ? toProperCase(finalLogoName) : finalLogoName;
+      facts.isTemplate || isManualTemplate
+        ? toProperCase(nameCorrection.correctedName)
+        : nameCorrection.correctedName;
 
     // Retry loop ke BAHAR — tags facts se bante hain, LLM output se nahi,
     // isliye inhe har validation attempt par dobara banane ki zaroorat nahi.
@@ -3196,29 +3236,33 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       console.warn(`  [publish-validate] ✗ Attempt ${attempt + 1}/${MAX_VALIDATION_RETRIES + 1} failed:\n    - ${validation.reasons.join("\n    - ")}`);
     }
 
-    const nameReview = reviewLogoName({ logoName: displayLogoName, visualFacts, facts });
-    const needsReview = !validation.passed || nameReview.length > 0;
-
-    const descriptionNeedsDraft =
-      !aiContent.isTemplate && !aiContent.description && aiContent.descriptionAttemptsExhausted;
-
-    if (descriptionNeedsDraft) {
-      console.warn(`  [description] Forcing publishStatus → "Draft" (description still empty after 3 full attempts).`);
+    if (!validation.passed) {
+      console.warn(
+        `  [publish-validate] Still imperfect after ${MAX_VALIDATION_RETRIES + 1} attempts — ` +
+        `publishing anyway, issues logged for visibility (not sent to review for this alone).`
+      );
     }
 
-    const descriptionReminder = descriptionNeedsDraft
-      ? `No verified facts could be found for "${displayLogoName}" after 3 attempts — description was left empty. Publish status set to Draft. An admin must manually write or verify the description before publishing.`
-      : null;
-
-    const allReasons = [
-      ...validation.reasons,
-      ...nameReview.map((r) => `NAME REVIEW: ${r}`),
-      ...(descriptionReminder ? [descriptionReminder] : []),
-    ];
+    // Templates never review. Everything else publishes unless the
+    // description itself is genuinely weak (bottomed out at the static
+    // emergency fallback sentence after every real attempt + LLM fallback).
+    const needsReview = !facts.isTemplate && !!facts.descriptionIsWeak;
 
     if (needsReview) {
-      console.warn(`  [publish-validate] Marking "Needs Review". Reasons:\n    - ${allReasons.join("\n    - ")}`);
+      console.warn(`  [review] "${displayLogoName}" flagged for review — description fell back to the static emergency template after all retries.`);
     }
+
+    const allReasons = [
+      ...(validation.reasons.length
+        ? [`Non-blocking content notes (did not block publishing): ${validation.reasons.join(" | ")}`]
+        : []),
+      ...(nameCorrection.wasCorrected
+        ? [`Logo name auto-corrected from "${finalLogoName}" to "${displayLogoName}" to match identified brand "${facts.brand}".`]
+        : []),
+      ...(needsReview
+        ? [`Description for "${displayLogoName}" could not be reliably generated even after retries and the relaxed fallback — needs manual review.`]
+        : []),
+    ];
 
     console.log(`  [ai] main: "${aiContent.mainCategory}" | sub: "${aiContent.subCategory}" | brand: "${aiContent.brand || "(none — template)"}" | website: "${aiContent.website || "(none)"}" | country: "${aiContent.country || "(none)"}" | industry: "${aiContent.industry || "(none)"}"`);
     console.log(`  [ai] metaTitle (${aiContent.metaTitle.length} chars): "${aiContent.metaTitle.substring(0, 60)}"`);
@@ -3334,11 +3378,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
         description: aiContent.description,
         tags: aiContent.tags,
         brandColors: sharedFields.brandColors,
-        publishStatus: needsReview
-          ? "Needs Review"
-          : descriptionNeedsDraft
-            ? "Draft"
-            : sharedFields.publishStatus,
+        publishStatus: needsReview ? "Needs Review" : sharedFields.publishStatus,
         validationStatus: needsReview ? "needs_review" : "published",
         validationReasons: allReasons,
         downloadCount: sharedFields.downloadCount,
@@ -3387,8 +3427,7 @@ async function processOneLogoFolder({ folderName, folderFiles, sharedFields, wat
       ogImageUrl,
       id: logo.id,
       needsReview,
-      descriptionNeedsDraft,
-      descriptionReminder,
+      nameAutoCorrected: nameCorrection.wasCorrected,
       validationReasons: allReasons,
     };
 

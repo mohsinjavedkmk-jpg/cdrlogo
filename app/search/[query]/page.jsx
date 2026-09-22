@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import { toSearchSlug } from "../../utils/searchSlug";
+import { toSearchSlug, fromSearchSlug } from "../../utils/searchSlug";
 
 const PAGE_SIZE = 12;
 
@@ -79,8 +79,9 @@ export default function SearchPage() {
     const params = useParams();
     const router = useRouter();
     const rawQuery = decodeURIComponent(params?.query ?? "");
+    const displayQuery = fromSearchSlug(rawQuery);   // box me space dikhega, hyphen nahi
 
-    const [inputVal, setInputVal] = useState(rawQuery);
+    const [inputVal, setInputVal] = useState(displayQuery);
     const [allLogos, setAllLogos] = useState([]);
     const [logos, setLogos] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -121,10 +122,8 @@ export default function SearchPage() {
             setLoading(false);
         }
     }, []);
-
-    // Search on mount from URL param (ek hi baar, page load pe)
     useEffect(() => {
-        if (rawQuery) doSearch(rawQuery);
+        if (displayQuery) doSearch(displayQuery);
     }, []);  // eslint-disable-line
 
     useEffect(() => {
